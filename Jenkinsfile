@@ -37,6 +37,12 @@ pipeline {
       }
     }
 
+    stage('Test') {
+  steps {
+    sh 'yarn test --coverage'
+  }
+}
+
     stage('SonarQube Analysis') {
       steps {
         withSonarQubeEnv('SonarQube') {
