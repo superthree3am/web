@@ -6,7 +6,7 @@ pipeline {
   }
 
   tools {
-    nodejs "NodeJS 18" // Pastikan diatur di Jenkins > Global Tool Configuration
+    nodejs "NodeJS 20.19.0" // Pastikan diatur di Jenkins > Global Tool Configuration
   }
 
   stages {
