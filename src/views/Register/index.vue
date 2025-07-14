@@ -1,12 +1,12 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
+                hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
       <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">
-        Daftar Akun Baru
+        Register your account
       </h1>
       <p class="text-center text-gray-600 mb-8">
-        Selamat datang! Silakan isi data diri Anda.
+        Welcome! Please complete your personal data.
       </p>
 
       <AlertMessage
@@ -20,84 +20,87 @@
       <form class="space-y-6" @submit.prevent="handleRegister">
         <BaseInput
           id="fullName"
-          label="Nama Lengkap"
+          label="Full Name"
           type="text"
-          placeholder="Masukkan nama lengkap Anda"
+          placeholder="Enter your full name"
           autocomplete="name"
           required
           v-model="fullName"
+          :errorMessage="formErrors.fullName"
         />
         <BaseInput
           id="email"
-          label="Email"
+          label="Email Address"
           type="email"
-          placeholder="Masukkan email Anda"
+          placeholder="Enter your email address"
           autocomplete="email"
           required
           v-model="email"
+          :errorMessage="formErrors.email"
         />
 
         <BaseInput
           id="phone"
-          label="Nomor Telepon"
-          type="phone"
-          placeholder="Masukkan nomor telepon anda"
-          autocomplete="phone"
-          required
+          label="Phone Number"
+          type="tel" placeholder="Enter your phone number"
+          autocomplete="tel" required
           v-model="phone"
-        />        
+          :errorMessage="formErrors.phone"
+        />         
 
         <BaseInput
           id="username"
-          label="Nama Pengguna"
+          label="Username"
           type="text"
-          placeholder="Pilih nama pengguna"
+          placeholder="Enter your username"
           autocomplete="username"
           required
           v-model="username"
+          :errorMessage="formErrors.username"
         />
         <BaseInput
           id="password"
-          label="Kata Sandi"
+          label="Password"
           type="password"
-          placeholder="Buat kata sandi baru"
+          placeholder="Create New Password"
           autocomplete="new-password"
           required
           v-model="password"
-        />
+          :errorMessage="formErrors.password"
+          :isPasswordToggle="true" />
         <BaseInput
           id="confirmPassword"
-          label="Konfirmasi Kata Sandi"
+          label="Confirm Password"
           type="password"
-          placeholder="Masukkan ulang kata sandi"
+          placeholder="Re-enter your password"
           autocomplete="new-password"
           required
           v-model="confirmPassword"
-        />
-        <div>
+          :errorMessage="formErrors.confirmPassword"
+          /> <div>
           <button
             type="submit"
             :disabled="authStore.isLoading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                   transition-all duration-300 ease-in-out"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
+                           transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': authStore.isLoading }"
           >
-            <span v-if="!authStore.isLoading">Daftar Sekarang</span>
+            <span v-if="!authStore.isLoading">Register Now</span>
             <span v-else class="flex items-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Mendaftar...
+              Registering...
             </span>
           </button>
         </div>
       </form>
 
       <p class="mt-6 text-center text-sm text-gray-500">
-        Sudah punya akun?
+        Already have an account?
         <router-link to="/" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out">
-          Login di sini
+          Back to login
         </router-link>
       </p>
     </div>
@@ -105,9 +108,9 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';  // Mengimpor store Pinia
+import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
 import AlertMessage from '@/components/AlertMessage.vue';
 
@@ -119,7 +122,7 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore();  // Mengakses store Pinia
+    const authStore = useAuthStore();
     
     // Form fields
     const fullName = ref('');
@@ -129,7 +132,17 @@ export default {
     const password = ref('');
     const confirmPassword = ref('');
 
-    // Alert state
+    // Error messages for each field
+    const formErrors = reactive({
+      fullName: '',
+      email: '',
+      phone: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+    });
+
+    // Alert state (for general registration status, not individual field errors)
     const showAlert = ref(false);
     const alertMessage = ref('');
     const alertType = ref('info');
@@ -156,71 +169,103 @@ export default {
       username.value = '';
       password.value = '';
       confirmPassword.value = '';
+      resetFormErrors(); // Clear all form errors on successful submission
     };
 
+    const resetFormErrors = () => {
+      for (const key in formErrors) {
+        formErrors[key] = '';
+      }
+    };
+
+    // Watchers to clear error messages when the input changes
+    watch(fullName, () => { formErrors.fullName = ''; });
+    watch(email, () => { formErrors.email = ''; });
+    watch(phone, () => { formErrors.phone = ''; });
+    watch(username, () => { formErrors.username = ''; });
+    watch(password, () => { formErrors.password = ''; });
+    watch(confirmPassword, () => { formErrors.confirmPassword = ''; });
+
+
     const handleRegister = async () => {
-      resetAlertState();  // Reset alert sebelum mulai proses
+      resetFormErrors(); // Clear all previous field errors
+      resetAlertState(); // Reset general alert before starting
 
-      // Validasi form
+      let hasError = false;
+
+      // Full Name validation
       if (!fullName.value.trim()) {
-        displayAlert('Nama lengkap tidak boleh kosong.', 'error', 5000); 
-        return;
+        formErrors.fullName = 'Full name is required.';
+        hasError = true;
       }
 
+      // Email validation
       if (!email.value.trim()) {
-        displayAlert('Email tidak boleh kosong.', 'error', 5000);
-        return;
+        formErrors.email = 'Email address is required.';
+        hasError = true;
+      } else {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email.value)) {
+          formErrors.email = 'The email format is invalid.';
+          hasError = true;
+        }
       }
 
+      // Phone Number validation
       if (!phone.value.trim()) {
-        displayAlert('Nomor telepon tidak boleh kosong.', 'error', 5000);
-        return;
+        formErrors.phone = 'Phone number is required.';
+        hasError = true;
+      } else {
+        const phoneRegex = /^[0-9]{10,12}$/;
+        if (!phoneRegex.test(phone.value)) {
+          formErrors.phone = 'Invalid phone number.';
+          hasError = true;
+        }
       }
 
+      // Username validation
       if (!username.value.trim()) {
-        displayAlert('Nama pengguna tidak boleh kosong.', 'error', 5000);
-        return;
+        formErrors.username = 'Username is required.';
+        hasError = true;
       }
 
+      // Password validation
       if (password.value !== confirmPassword.value) {
-        displayAlert('Konfirmasi kata sandi tidak cocok.', 'error', 5000);
-        return;
+        formErrors.confirmPassword = 'Password confirmation does not match.';
+        hasError = true;
       }
 
-      if (password.value.length < 6) {
-        displayAlert('Kata sandi harus minimal 6 karakter.', 'error', 5000);
-        return;
+      const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+      if (!strongPasswordRegex.test(password.value)) {
+        formErrors.password = 'Password must be at least 8 characters long and contain uppercase letters, lowercase letters, and numbers.';
+        hasError = true;
       }
 
-      // Validasi email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.value)) {
-        displayAlert('Format email tidak valid.', 'error', 5000);
-        return;
+      if (hasError) {
+        return; // Stop if there are any validation errors
       }
 
       try {
         const result = await authStore.register({
           fullName: fullName.value,
           email: email.value,
-          username: username.value,
           phone: phone.value,
-          password: password.value,
-          full_name: fullName.value
+          username: username.value,
+          password: password.value
         });
 
         if (result.success) {
-          displayAlert(result.message, 'success', 3000); 
+          displayAlert(result.message, 'success', 3000);
           resetForm();
           setTimeout(() => {
-            router.push('/login');  // Redirect setelah suksessesss
+            router.push('/login');
           }, 1500);
         } else {
-          displayAlert(result.message || 'Pendaftaran gagal, silakan coba lagi.', 'error', 0); 
+          displayAlert(result.message || 'Registration failed, please try again.', 'error', 0);
         }
       } catch (error) {
         console.error('Unexpected error:', error);
-        displayAlert('Terjadi kesalahan yang tidak terduga saat pendaftaran.', 'error', 0);
+        displayAlert('An unexpected error happened while registering.', 'error', 0);
       }
     };
 
@@ -236,6 +281,7 @@ export default {
       alertType,
       alertDuration,
       authStore,
+      formErrors,
       handleRegister,
       resetAlertState,
     };

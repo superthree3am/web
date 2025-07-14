@@ -1,13 +1,13 @@
 <template>
   <div>
-    <h2>Verifikasi OTP</h2>
-    <p>Masukkan kode OTP yang telah dikirim ke email Anda.</p>
+    <h2>Authentication Verification</h2>
+    <p>Enter the OTP code that has been sent to your registered mobile number.</p>
 
     <div v-if="errorMessage">{{ errorMessage }}</div>
 
     <input v-for="(digit, index) in otpDigits" :key="index" v-model="otpDigits[index]" maxlength="1" />
 
-    <button :disabled="isLoading" @click="verifyOtp">Verifikasi OTP</button>
+    <button :disabled="isLoading" @click="verifyOtp">OTP Verification</button>
   </div>
 </template>
 
@@ -31,7 +31,7 @@ export default {
       const otpCode = otpDigits.value.join('');
 
       if (otpCode.length !== 6) {
-        errorMessage.value = 'OTP harus terdiri dari 6 digit.';
+        errorMessage.value = 'OTP must contain 6 digits..';
         isLoading.value = false;
         return;
       }
@@ -45,7 +45,7 @@ export default {
           errorMessage.value = result.message || 'Verifikasi OTP gagal.';
         }
       } catch (error) {
-        errorMessage.value = 'Terjadi kesalahan saat verifikasi OTP.';
+        errorMessage.value = 'There was an error verifying the OTP.';
       } finally {
         isLoading.value = false;
       }
@@ -60,4 +60,3 @@ export default {
   },
 };
 </script>
-

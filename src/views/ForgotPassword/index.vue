@@ -4,10 +4,10 @@
       
       <!-- Heading -->
       <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">
-        Lupa Kata Sandi Anda?
+        Forgot your password?
       </h1>
       <p class="text-center text-gray-600 mb-6">
-        Masukkan nama pengguna atau alamat email Anda untuk menerima instruksi reset.
+        Enter your email address to receive a reset token.
       </p>
 
       <!-- Error Message -->
@@ -18,12 +18,12 @@
       <!-- Form -->
       <form class="space-y-6" @submit.prevent="handleResetPassword">
         <div class="space-y-2">
-          <label for="userEmail" class="block text-sm font-medium text-gray-700">Nama Pengguna atau Email</label>
+          <label for="userEmail" class="block text-sm font-medium text-gray-700">Email address</label>
           <input
             id="userEmail"
             type="text"
             v-model="emailOrUsername"
-            placeholder="Contoh: userbank atau email@example.com"
+            placeholder="Enter your email address"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
             required
           />
@@ -34,9 +34,9 @@
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300"
+            class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300"
           >
-            <span v-if="!isLoading">Kirim Instruksi Reset</span>
+            <span v-if="!isLoading">Reset Password</span>
             <span v-else class="flex items-center justify-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -50,9 +50,9 @@
 
       <!-- Link to Login -->
       <p class="mt-6 text-center text-sm text-gray-500">
-        Ingat kata sandi? 
+        Remembered your password ? 
         <router-link to="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
-          Masuk di sini
+          Back to login
         </router-link>
       </p>
     </div>
