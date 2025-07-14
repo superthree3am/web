@@ -6,7 +6,7 @@ pipeline {
   }
 
   tools {
-    nodejs "NodeJS 20.19.0" // Pastikan diatur di Jenkins > Global Tool Configuration
+    nodejs "NodeJS 20.19.0" // Pastikan NodeJS ini sudah disiapkan di Jenkins > Global Tool Configuration
   }
 
   stages {
@@ -16,8 +16,11 @@ pipeline {
       }
     }
 
-    stage('Install Dependencies') {
+    stage('Install Yarn & Dependencies') {
       steps {
+        // ✅ Install yarn jika belum tersedia
+        sh 'npm install -g yarn'
+        sh 'yarn --version'  // Cek versi sebagai validasi
         sh 'yarn install'
       }
     }
