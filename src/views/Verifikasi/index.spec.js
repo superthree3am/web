@@ -56,8 +56,11 @@ describe('OtpVerification.vue', () => {
     });
 
     const inputs = wrapper.findAll('input');
+
+    const code = ['0', '1', '2', '3', '4', '5'];
     for (let i = 0; i < 6; i++) {
-      await inputs[i].setValue(String(i));
+      await inputs[i].setValue(code[i]);
+      await inputs[i].trigger('input'); // penting untuk update v-model
     }
 
     await wrapper.find('form').trigger('submit.prevent');
