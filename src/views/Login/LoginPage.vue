@@ -133,7 +133,7 @@ export default {
           errorMessage.value = result.message;
         }
       } catch (error) {
-        errorMessage.value = 'Username atau Password Salah';  // Pesan error default
+        errorMessage.value = 'ERROR : Incorrect username or password';  // Pesan error default
       } finally {
         isLoading.value = false;
       }
