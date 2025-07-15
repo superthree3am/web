@@ -3,11 +3,11 @@ pipeline {
 
   environment {
     NODE_ENV = "development"
-    NODE_OPTIONS = "--max-old-space-size=2048" // 💡 untuk mencegah Bridge timeout
+    NODE_OPTIONS = "--max-old-space-size=2048"
   }
 
   tools {
-    nodejs "NodeJS 20.19.0" // ✅ pastikan sudah tersedia di Jenkins Tools
+    nodejs "NodeJS 20.19.0"
   }
 
   stages {
@@ -20,7 +20,6 @@ pipeline {
     stage('Install Yarn & Dependencies') {
       steps {
         sh 'npm install -g yarn'
-        sh 'yarn --version'
         sh 'yarn install'
       }
     }
@@ -37,9 +36,10 @@ pipeline {
       }
     }
 
-    stage('Test') {
+    stage('Test & Coverage') {
       steps {
-        sh 'yarn test' // ✅ pastikan coverage dijalankan
+        sh 'yarn vitest run --coverage'
+        sh 'ls -lh coverage/lcov.info || echo "❌ lcov.info missing!"'
       }
     }
 
