@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
   const isAuthenticated = ref(false);
-  const isLoading = ref(false);
+  const isLoading = ref(false); // Global loading state untuk store
   const baseURL = process.env.VUE_APP_SERVICE_API;
   const router = useRouter();
 
@@ -75,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          full_name: userData.fullName,
+          full_name: userData.fullName, // Menggunakan full_name sesuai permintaan sebelumnya
           email: userData.email,
           username: userData.username,
           phone: userData.phone, 
@@ -86,7 +86,6 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Jika registrasi berhasil, langsung arahkan ke halaman login
         return {
           success: true,
           message: data.message || 'Pendaftaran berhasil',
@@ -126,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await response.json();
 
       if (response.ok) {
+        isAuthenticated.value = true; // Asumsi authenticated setelah OTP diverifikasi
         return {
           success: true,
           message: data.message || 'Verifikasi OTP berhasil!',
@@ -147,6 +147,48 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = false;
     }
   };
+
+  // Fungsi untuk meminta pengiriman ulang OTP
+  const resendOtp = async () => {
+    isLoading.value = true; // Menggunakan isLoading global store
+    try {
+      const response = await fetch(`${baseURL}/api/v1/resend-otp`, { // Pastikan URL ini benar
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Jika backend memerlukan token atau data user untuk resend, tambahkan di sini.
+          // Contoh: 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          // body: JSON.stringify({ username: user.value?.username || '' }), // Mengirim username jika tersedia
+        },
+        // Jika backend tidak memerlukan body untuk resend, bisa dikosongkan
+        body: JSON.stringify({ /* data yang diperlukan backend untuk resend */ })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return {
+          success: true,
+          message: data.message || 'OTP baru berhasil dikirim ulang!',
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || 'Gagal mengirim ulang OTP.',
+        };
+      }
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      return {
+        success: false,
+        message: 'Terjadi kesalahan jaringan saat mencoba mengirim ulang OTP.',
+        error: error.message,
+      };
+    } finally {
+      isLoading.value = false; // Set kembali ke false setelah selesai
+    }
+  };
+
 
   // Fungsi logout
   const logout = () => {
@@ -173,6 +215,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     verifyOtp,
+    resendOtp, 
     logout,
     checkAuth,
   };
