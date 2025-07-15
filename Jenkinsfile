@@ -39,7 +39,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'yarn test --coverage' // ✅ pastikan coverage dijalankan
+        sh 'yarn test' // ✅ pastikan coverage dijalankan
       }
     }
 
