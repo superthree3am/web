@@ -1,15 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
   const isAuthenticated = ref(false);
   const isLoading = ref(false);
-  const baseURL = process.env.VUE_APP_SERVICE_API;
-  const router = useRouter();
+  const baseURL = import.meta.env.VITE_API_BASE_URL || process.env.VUE_APP_SERVICE_API || 'http://localhost:3000';
 
-  // Fungsi login
   const login = async (credentials) => {
     isLoading.value = true;
     try {
@@ -34,11 +31,14 @@ export const useAuthStore = defineStore('auth', () => {
           localStorage.setItem('auth_token', data.token);
         }
 
-        // Cek jika MFA (OTP) diperlukan
+        // ⛔ router harus dipanggil DI SINI
+        const { useRouter } = await import('vue-router');
+        const router = useRouter();
+
         if (data.mfaRequired) {
-          router.push('/otp'); // Arahkan ke halaman OTP jika MFA diperlukan
+          router.push('/otp');
         } else {
-          router.push('/dashboard'); // Jika tidak ada MFA, langsung menuju dashboard
+          router.push('/dashboard');
         }
 
         return {
@@ -65,7 +65,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // Fungsi untuk register (registrasi)
   const register = async (userData) => {
     isLoading.value = true;
     try {
@@ -74,35 +73,20 @@ export const useAuthStore = defineStore('auth', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          fullName: userData.fullName,
-          email: userData.email,
-          username: userData.username,
-          phone: userData.phone, 
-          password: userData.password,
-          full_name: userData.full_name
-        })
-      })
+        body: JSON.stringify(userData),
+      });
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Jika registrasi berhasil, langsung arahkan ke halaman login
-        return {
-          success: true,
-          message: data.message || 'Pendaftaran berhasil',
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Pendaftaran gagal',
-        };
-      }
+      return {
+        success: response.ok,
+        message: data.message || (response.ok ? 'Pendaftaran berhasil' : 'Pendaftaran gagal'),
+      };
     } catch (error) {
       console.error('Register error:', error);
       return {
         success: false,
-        message: 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.',
+        message: 'Terjadi kesalahan saat pendaftaran.',
         error: error.message,
       };
     } finally {
@@ -110,7 +94,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // Fungsi verifikasi OTP
   const verifyOtp = async (otpCode) => {
     isLoading.value = true;
     try {
@@ -119,24 +102,15 @@ export const useAuthStore = defineStore('auth', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          otp: otpCode,
-        }),
+        body: JSON.stringify({ otp: otpCode }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        return {
-          success: true,
-          message: data.message || 'Verifikasi OTP berhasil!',
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Verifikasi OTP gagal.',
-        };
-      }
+      return {
+        success: response.ok,
+        message: data.message || (response.ok ? 'Verifikasi berhasil' : 'Verifikasi gagal'),
+      };
     } catch (error) {
       console.error('OTP Verification error:', error);
       return {
@@ -149,22 +123,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // Fungsi logout
-  const logout = () => {
+  const logout = async () => {
     user.value = null;
     isAuthenticated.value = false;
     localStorage.removeItem('auth_token');
-    router.push('/login');  // Arahkan ke halaman login setelah logout
+
+    // ⛔ router harus dipanggil DI SINI juga
+    const { useRouter } = await import('vue-router');
+    const router = useRouter();
+    router.push('/login');
   };
 
-  // Fungsi untuk mengecek status autentikasi
   const checkAuth = () => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      isAuthenticated.value = true;
-    } else {
-      isAuthenticated.value = false;
-    }
+    isAuthenticated.value = !!localStorage.getItem('auth_token');
   };
 
   return {

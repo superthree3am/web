@@ -89,9 +89,10 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router'; // useRoute masih diperlukan untuk routing secara umum, tapi tidak untuk membaca token
+import { useRoute, useRouter } from 'vue-router';
 import BaseInput from '@/components/BaseInput.vue';
 import AlertMessage from '@/components/AlertMessage.vue';
+import { useAuthStore } from '@/stores/auth';
 
 export default {
   name: 'SetNewPassword',
@@ -100,8 +101,9 @@ export default {
     AlertMessage,
   },
   setup() {
-    const route = useRoute(); // Tetap import jika ada kebutuhan lain membaca route params
+    const route = useRoute();
     const router = useRouter();
+    const authStore = useAuthStore();
     const newPassword = ref('');
     const confirmPassword = ref('');
     const isLoading = ref(false);
@@ -110,7 +112,8 @@ export default {
     const alertType = ref('info');
     const passwordError = ref('');
     const confirmPasswordError = ref('');
-    const resetToken = ref(''); // Akan diisi manual oleh user
+    const resetToken = ref('');
+    const tokenError = ref('');
 
     const validateForm = () => {
       tokenError.value = '';
@@ -158,59 +161,38 @@ export default {
 
     const handleSetNewPassword = async () => {
       resetAlert();
-      validateForm(); // Validasi final sebelum submit
+      validateForm();
 
       if (!isFormValid.value) {
         displayAlert('Harap perbaiki kesalahan input Anda.', 'error');
         return;
       }
 
-      if (!resetToken.value) {
-        displayAlert('Token reset tidak ditemukan atau tidak valid. Silakan coba lagi proses reset kata sandi.', 'error');
-        return;
-      }
-
       isLoading.value = true;
 
-      // --- SIMULASI PEMROSESAN RESET PASSWORD ---
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulasi penundaan
+      const result = await authStore.setNewPassword({
+        token: resetToken.value,
+        password: newPassword.value,
+      });
 
-      // LOGIKA DUMMY UNTUK RESET PASSWORD
-      // Dalam aplikasi nyata, Anda akan mengirim token dan password ke backend
-      // Sekarang resetToken.value akan berisi input manual dari user
-      if (resetToken.value.startsWith('DUMMY_RESET_TOKEN_') && newPassword.value === confirmPassword.value) {
+      if (result.success) {
         displayAlert('Kata sandi berhasil diubah! Silakan masuk dengan kata sandi baru Anda.', 'success', 5000);
-        resetToken.value = ''; // Bersihkan input
+        resetToken.value = '';
         newPassword.value = '';
         confirmPassword.value = '';
         setTimeout(() => {
-          router.push('/login'); // Redirect ke halaman login setelah berhasil
+          router.push('/login');
         }, 2000);
       } else {
-        // Jika token tidak cocok dengan format dummy yang kita harapkan,
-        // atau kata sandi tidak cocok, berikan error.
-        displayAlert('Token tidak valid atau kata sandi tidak cocok. Silakan coba lagi.', 'error');
+        displayAlert(result.message || 'Reset gagal. Coba lagi.', 'error');
       }
 
       isLoading.value = false;
     };
 
-    // --- BAGIAN INI DIHAPUS ATAU DIUBAH ---
     onMounted(() => {
-      // Hapus atau komentari baris ini agar token tidak diisi otomatis dari URL
-      // const tokenFromUrl = route.query.token;
-      // if (tokenFromUrl) {
-      //   resetToken.value = tokenFromUrl;
-      //   displayAlert('Token reset telah diisi dari URL.', 'info', 3000);
-      // } else {
-      //   displayAlert('Harap masukkan token reset Anda secara manual.', 'info', 0); // Pesan jika URL kosong
-      // }
-
-      // Opsional: Anda bisa menambahkan pesan info awal jika ingin
       displayAlert('Harap masukkan token reset Anda secara manual.', 'info', 0);
     });
-
-    const tokenError = ref(''); // Pastikan ini tetap ada
 
     return {
       resetToken,

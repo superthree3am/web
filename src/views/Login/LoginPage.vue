@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen  flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
-      
+
       <!-- Logo BNI -->
       <div class="flex justify-center mb-6">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
@@ -20,21 +20,23 @@
       <!-- Login Form -->
       <form class="space-y-6" @submit.prevent="handleLogin">
         <BaseInput
-          id="username"
-          label="Username"
-          type="text"
-          placeholder="Enter your username"
-          autocomplete="username"
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          placeholder="Enter your email"
+          autocomplete="email"
           v-model="username"
           required
         />
 
         <BaseInput
           id="password"
+          name="password"
           label="Password"
           type="password"
           placeholder="Enter your password"
-          autocomplete="password"
+          autocomplete="current-password"
           v-model="password"
           required
         />
@@ -94,7 +96,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';  // Pinia store untuk autentikasi
+import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
 
 export default {
@@ -104,7 +106,7 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore();  // Mendapatkan Pinia store
+    const authStore = useAuthStore();
 
     const username = ref('');
     const password = ref('');
@@ -113,7 +115,7 @@ export default {
 
     const handleLogin = async () => {
       isLoading.value = true;
-      errorMessage.value = ''; // Reset error message sebelum memulai
+      errorMessage.value = '';
 
       try {
         const result = await authStore.login({
@@ -122,18 +124,16 @@ export default {
         });
 
         if (result.success) {
-          // Login berhasil, arahkan ke halaman OTP jika diperlukan
-          if (result.data.mfaRequired) {
+          if (result.data?.mfaRequired) {
             router.push('/otp');
           } else {
             router.push('/dashboard');
           }
         } else {
-          // Tampilkan error jika login gagal
           errorMessage.value = result.message;
         }
       } catch (error) {
-        errorMessage.value = 'Username atau Password Salah';  // Pesan error default
+        errorMessage.value = 'Username atau Password Salah';
       } finally {
         isLoading.value = false;
       }
@@ -149,4 +149,3 @@ export default {
   }
 };
 </script>
-

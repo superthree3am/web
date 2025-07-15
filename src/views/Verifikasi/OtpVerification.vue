@@ -1,26 +1,49 @@
 <template>
-  <div>
-    <h2>Authentication Verification</h2>
-    <p>Enter the OTP code that has been sent to your registered mobile number.</p>
+  <div class="min-h-screen flex items-center justify-center px-4">
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
+      <h2 class="text-2xl font-bold text-center mb-4">Authentication Verification</h2>
+      <p class="text-center text-gray-600 mb-6">
+        Enter the OTP code that has been sent to your registered mobile number.
+      </p>
 
-    <div v-if="errorMessage">{{ errorMessage }}</div>
+      <p v-if="errorMessage" class="text-red-600 text-sm mt-2">{{ errorMessage }}</p>
 
-    <input v-for="(digit, index) in otpDigits" :key="index" v-model="otpDigits[index]" maxlength="1" />
 
-    <button :disabled="isLoading" @click="verifyOtp">OTP Verification</button>
+      <form @submit.prevent="verifyOtp" class="space-y-4">
+        <div class="flex justify-center space-x-2">
+          <input
+            v-for="(digit, index) in otpDigits"
+            :key="index"
+            v-model="otpDigits[index]"
+            maxlength="1"
+            class="w-10 h-10 text-center border border-gray-300 rounded"
+            type="text"
+            :data-testid="'otp-' + index"
+          />
+        </div>
+
+        <button
+          type="submit"
+          :disabled="isLoading"
+          class="w-full mt-6 py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded disabled:opacity-50"
+        >
+          {{ isLoading ? 'Verifying...' : 'Verify OTP' }}
+        </button>
+      </form>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';  // Pastikan mengimpor useRouter
-import { useAuthStore } from '@/stores/auth';  // Mengimpor store Pinia
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
 export default {
   setup() {
-    const router = useRouter(); // Mendapatkan instance router
+    const router = useRouter();
     const authStore = useAuthStore();
-    const otpDigits = ref(['', '', '', '', '', '']); // Array untuk OTP
+    const otpDigits = ref(['', '', '', '', '', '']);
     const isLoading = ref(false);
     const errorMessage = ref('');
 
@@ -31,16 +54,15 @@ export default {
       const otpCode = otpDigits.value.join('');
 
       if (otpCode.length !== 6) {
-        errorMessage.value = 'OTP must contain 6 digits..';
+        errorMessage.value = 'OTP must contain 6 digits.';
         isLoading.value = false;
         return;
       }
 
       try {
         const result = await authStore.verifyOtp(otpCode);
-
         if (result.success) {
-          router.push('/dashboard'); // Arahkan ke dashboard setelah OTP berhasil diverifikasi
+          router.push('/dashboard');
         } else {
           errorMessage.value = result.message || 'Verifikasi OTP gagal.';
         }
