@@ -3,6 +3,13 @@
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
+      <div class="absolute top-4 left-4">
+        <button @click="goBackToLogin" class="text-gray-600 hover:text-gray-800 transition-colors duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+      </div>
       <div class="flex justify-center mb-6">
         <img class="h-24 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
@@ -72,7 +79,8 @@
 <script>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+// Asumsi Anda menggunakan `auth-alt` atau telah mengganti nama file auth.js Anda
+import { useAuthStore } from '@/stores/auth'; // Atau '@/stores/auth-alt' jika Anda menamakannya begitu
 
 export default {
   name: 'OtpVerification',
@@ -124,7 +132,7 @@ export default {
       const otpCode = otpDigits.value.join('');
 
       if (otpCode.length !== 6 || !/^\d+$/.test(otpCode)) {
-        errorMessage.value = 'OTP harus berupa 6 digit angka.';
+        errorMessage.value = 'The OTP must be a 6-digit number.';
         isLoading.value = false;
         return;
       }
@@ -132,13 +140,15 @@ export default {
       try {
         const result = await authStore.verifyOtp(otpCode);
 
+        // Perubahan jika authStore.verifyOtp sekarang mengarahkan langsung
         if (result.success) {
-          router.push('/dashboard');
+          // Jika router.push sudah dilakukan di store, tidak perlu lagi di sini
+          // router.push('/dashboard'); // Hapus baris ini jika sudah di handle di store
         } else {
-          errorMessage.value = result.message || 'Verifikasi OTP gagal.';
+          errorMessage.value = result.message || 'OTP verification failed.';
         }
       } catch (error) {
-        errorMessage.value = 'Terjadi kesalahan saat memverifikasi OTP. Silakan coba lagi.';
+        errorMessage.value = 'An error occurred while verifying the OTP. Please try again.';
       } finally {
         isLoading.value = false;
       }
@@ -152,7 +162,7 @@ export default {
       try {
         const result = await authStore.resendOtp(); // Panggil fungsi resendOtp dari store
         if (result.success) {
-          alert(result.message || 'OTP baru telah dikirim ke nomor ponsel Anda!');
+          alert(result.message || 'A new OTP has been sent to your mobile number!');
           otpDigits.value = ['', '', '', '', '', '']; // Bersihkan input OTP setelah resend
           // Opsional: Fokus kembali ke input pertama
           setTimeout(() => {
@@ -161,14 +171,20 @@ export default {
             }
           }, 0);
         } else {
-          errorMessage.value = result.message || 'Gagal mengirim ulang OTP. Silakan coba lagi.';
+          errorMessage.value = result.message || 'Failed to resend OTP. Please try again.';
         }
       } catch (error) {
-        errorMessage.value = 'Terjadi kesalahan jaringan saat mencoba mengirim ulang OTP.';
+        errorMessage.value = 'A network error occurred while trying to resend the OTP.';
       } finally {
         isResending.value = false; // Matikan loading state resend
       }
     };
+
+    // NEW: Fungsi untuk kembali ke halaman login
+    const goBackToLogin = () => {
+      router.push('/login');
+    };
+    // END NEW
 
     return {
       otpDigits,
@@ -179,7 +195,8 @@ export default {
       handleBackspace,
       otpInputs,
       isResending,
-      resendOtp: handleResendOtp, // Ubah nama fungsi yang dikembalikan menjadi handleResendOtp
+      resendOtp: handleResendOtp,
+      goBackToLogin, // NEW: Kembalikan fungsi goBackToLogin
     };
   },
 };
@@ -198,5 +215,11 @@ export default {
 }
 .animate-fade-in-down {
   animation: fade-in-down 0.5s ease-out forwards;
+}
+
+/* NEW: Pastikan parent container untuk elemen utama (div.bg-white) memiliki position: relative */
+/* Anda mungkin perlu menambahkan ini ke div yang berisi card login Anda jika belum ada */
+.min-h-screen.flex.items-center.justify-center.p-4.bg-gray-50 > div { /* Targetkan div putih */
+    position: relative; /* Penting untuk positioning absolute tombol back */
 }
 </style>
