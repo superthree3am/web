@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
@@ -34,7 +35,7 @@
           autocomplete="current-password"
           v-model="password"
           required
-        />
+          :is-password-toggle="true" />
 
         <div class="flex items-center justify-between">
           <div class="flex items-center">
@@ -59,8 +60,8 @@
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                   transition-all duration-300 ease-in-out"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
+                                   transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
           >
             <span v-if="!isLoading">Login</span>
@@ -143,11 +144,20 @@ export default {
 };
 </script>
 
-<style>
-#app {
-  background-image: url('@/assets/background.png');
-  background-size: cover;
-  background-position: center;
-  min-height: 100vh;
+<style scoped>
+/* Anda dapat menambahkan gaya kustom di sini jika diperlukan */
+/* Misalnya, jika animate-fade-in-down tidak didefinisikan secara global */
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-down {
+  animation: fade-in-down 0.5s ease-out forwards;
 }
 </style>

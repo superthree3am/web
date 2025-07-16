@@ -165,25 +165,26 @@ export const useAuthStore = defineStore('auth', () => {
           password: userData.password
         })
       });
+      });
 
       const data = await response.json();
 
       if (response.ok) {
         return {
           success: true,
-          message: data.message || 'Pendaftaran berhasil',
+          message: data.message || 'Registration successful.', // Changed
         };
       } else {
         return {
           success: false,
-          message: data.message || 'Pendaftaran gagal',
+          message: data.message || 'Registration failed.', // Changed
         };
       }
     } catch (error) {
       console.error('Register error:', error);
       return {
         success: false,
-        message: 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.',
+        message: 'An error occurred during registration. Please try again.', // Changed
         error: error.message,
       };
     } finally {
