@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
+                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
       <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">
         Register your account
       </h1>
@@ -46,7 +46,7 @@
           autocomplete="tel" required
           v-model="phone"
           :errorMessage="formErrors.phone"
-        />         
+        />        
 
         <BaseInput
           id="username"
@@ -82,7 +82,7 @@
             type="submit"
             :disabled="authStore.isLoading"
             class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
-                           transition-all duration-300 ease-in-out"
+                                   transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': authStore.isLoading }"
           >
             <span v-if="!authStore.isLoading">Register Now</span>
@@ -255,12 +255,14 @@ export default {
         });
 
         if (result.success) {
-          displayAlert(result.message, 'success', 3000);
+          // Changed the success message to English
+          displayAlert('Registration successful! Redirecting to login...', 'success', 6000);
           resetForm();
           setTimeout(() => {
             router.push('/login');
           }, 1500);
         } else {
+          // Keep the existing error message from result.message, or a fallback in English
           displayAlert(result.message || 'Registration failed, please try again.', 'error', 0);
         }
       } catch (error) {
@@ -290,5 +292,19 @@ export default {
 </script>
 
 <style scoped>
-/* Styling */
+/* Anda dapat menambahkan gaya kustom di sini jika diperlukan */
+/* Misalnya, jika animate-fade-in-down tidak didefinisikan secara global */
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-down {
+  animation: fade-in-down 0.5s ease-out forwards;
+}
 </style>

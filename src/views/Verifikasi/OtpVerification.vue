@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+  <div class="min-h-screen flex items-center justify-center p-4 bg-cover bg-center" style="background-image: url('/src/assets/bg-login.webp');">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
@@ -84,14 +84,12 @@
 <script>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth'; // Perhatikan bahwa Anda mengimpor 'auth', bukan 'auth-alt'
+import { useAuthStore } from '@/stores/auth';
 
 export default {
   name: 'OtpVerification',
   setup() {
     const router = useRouter();
-    // Pastikan Anda mengimpor store yang benar jika namanya auth-alt
-    // import { useAuthStore } from '@/stores/auth-alt'; // Jika nama file store Anda adalah auth-alt.js
     const authStore = useAuthStore();
     const otpDigits = ref(['', '', '', '', '', '']);
     const isLoading = ref(false);
@@ -165,7 +163,7 @@ export default {
       const otpCode = otpDigits.value.join('');
 
       if (otpCode.length !== 6 || !/^\d+$/.test(otpCode)) {
-        errorMessage.value = 'Incorrect OTP Code!'; // Already English
+        errorMessage.value = 'Incorrect OTP Code!';
         isLoading.value = false;
         return;
       }
@@ -176,10 +174,10 @@ export default {
         if (result.success) {
           // If router.push is handled in the store, no need to do it here
         } else {
-          errorMessage.value = result.message || 'Incorrect OTP Code!'; // Already English
+          errorMessage.value = result.message || 'Incorrect OTP Code!';
         }
       } catch (error) {
-        errorMessage.value = 'An error occurred while verifying the OTP. Please try again.'; // Changed
+        errorMessage.value = 'An error occurred while verifying the OTP. Please try again.';
       } finally {
         isLoading.value = false;
       }
@@ -200,10 +198,10 @@ export default {
           }, 0);
           startResendTimer();
         } else {
-          errorMessage.value = result.message || 'Failed to resend OTP. Please try again.'; // Changed
+          errorMessage.value = result.message || 'Failed to resend OTP. Please try again.';
         }
       } catch (error) {
-        errorMessage.value = 'A network error occurred while trying to resend the OTP.'; // Changed
+        errorMessage.value = 'A network error occurred while trying to resend the OTP.';
       } finally {
         isResending.value = false;
       }
@@ -247,7 +245,7 @@ export default {
   animation: fade-in-down 0.5s ease-out forwards;
 }
 
-.min-h-screen.flex.items-center.justify-center.p-4.bg-gray-50 > div {
+.min-h-screen.flex.items-center.justify-center.p-4 > div {
     position: relative;
 }
 </style>
