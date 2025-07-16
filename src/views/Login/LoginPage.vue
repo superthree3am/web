@@ -1,9 +1,8 @@
 <template>
-  <div class="min-h-screen  flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
-      
-      <!-- Logo BNI -->
+                hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
+
       <div class="flex justify-center mb-6">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
@@ -12,12 +11,10 @@
         Sign in to your account
       </h1>
 
-      <!-- Error Message -->
       <div v-if="errorMessage" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
         <span class="font-semibold">ERROR: </span>{{ errorMessage }}
       </div>
 
-      <!-- Login Form -->
       <form class="space-y-6" @submit.prevent="handleLogin">
         <BaseInput
           id="username"
@@ -37,9 +34,9 @@
           autocomplete="password"
           v-model="password"
           required
+          is-password-toggle
         />
 
-        <!-- Remember Me Checkbox -->
         <div class="flex items-center justify-between">
           <div class="flex items-center">
             <input
@@ -59,13 +56,12 @@
           </div>
         </div>
 
-        <!-- Login Button -->
         <div>
           <button
             type="submit"
             :disabled="isLoading"
             class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
-                          transition-all duration-300 ease-in-out"
+                            transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
           >
             <span v-if="!isLoading">Login</span>
@@ -80,7 +76,6 @@
         </div>
       </form>
 
-      <!-- Redirect to Signup -->
       <p class="mt-6 text-center text-sm text-gray-500">
         Don't have an account?
         <router-link to="/register" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out">
@@ -94,7 +89,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';  // Pinia store untuk autentikasi
+import { useAuthStore } from '@/stores/auth'; // Pinia store untuk autentikasi
 import BaseInput from '@/components/BaseInput.vue';
 
 export default {
@@ -104,7 +99,7 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore();  // Mendapatkan Pinia store
+    const authStore = useAuthStore(); // Mendapatkan Pinia store
 
     const username = ref('');
     const password = ref('');
@@ -133,7 +128,9 @@ export default {
           errorMessage.value = result.message;
         }
       } catch (error) {
-        errorMessage.value = 'ERROR : Incorrect username or password';  // Pesan error default
+        // Tangani kesalahan jaringan atau lainnya yang tidak ditangkap oleh store
+        errorMessage.value = 'ERROR: Terjadi masalah koneksi atau server. Silakan coba lagi.'; // Pesan error yang lebih umum
+        console.error("Login failed:", error); // Log error untuk debugging
       } finally {
         isLoading.value = false;
       }
@@ -150,3 +147,20 @@ export default {
 };
 </script>
 
+<style scoped>
+/* Anda dapat menambahkan gaya kustom di sini jika diperlukan */
+/* Misalnya, jika animate-fade-in-down tidak didefinisikan secara global */
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-down {
+  animation: fade-in-down 0.5s ease-out forwards;
+}
+</style>

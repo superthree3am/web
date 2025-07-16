@@ -2,17 +2,41 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-export const useAuthStore = defineStore('auth', () => {
+export const useAuthStore = defineStore('auth-alt', () => { // Mengubah nama store menjadi 'auth-alt'
   const user = ref(null);
   const isAuthenticated = ref(false);
-  const isLoading = ref(false);
+  const isLoadingAuth = ref(false); // Mengubah nama untuk loading state terkait otentikasi
   const baseURL = process.env.VUE_APP_SERVICE_API;
   const router = useRouter();
 
   // Fungsi login
   const login = async (credentials) => {
-    isLoading.value = true;
+    isLoadingAuth.value = true; // Menggunakan isLoadingAuth
     try {
+      // --- Logika Dummy untuk OTP ---
+      if (credentials.username === 'otptest') {
+        // Cek password dummy khusus untuk 'otptest'
+        if (credentials.password === 'otp123') { // <--- Password khusus untuk dummy OTP
+          user.value = { username: credentials.username };
+          isAuthenticated.value = true;
+          // Tidak perlu token di localStorage untuk dummy ini jika tidak ada backend
+          router.push('/otp');
+          return {
+            success: true,
+            message: 'Login successful, OTP required (Dummy).', // Changed
+            mfaRequired: true,
+          };
+        } else {
+          // Password salah untuk dummy user 'otptest'
+          return {
+            success: false,
+            message: 'Incorrect password for dummy OTP user.', // Changed
+          };
+        }
+      }
+      // --- Akhir Logika Dummy untuk OTP ---
+
+      // --- Logika Asli untuk Login Backend ---
       const response = await fetch(`${baseURL}/api/v1/login`, {
         method: 'POST',
         headers: {
@@ -34,40 +58,42 @@ export const useAuthStore = defineStore('auth', () => {
           localStorage.setItem('auth_token', data.token);
         }
 
-        // Cek jika MFA (OTP) diperlukan
-        if (data.mfaRequired) {
-          router.push('/otp'); // Arahkan ke halaman OTP jika MFA diperlukan
+        if (data.mfaRequired) { // Cek mfaRequired dari respons backend
+          router.push('/otp');
+          return {
+            success: true,
+            message: data.message || 'Login successful, OTP required.', // Changed
+            mfaRequired: true,
+          };
         } else {
-          router.push('/dashboard'); // Jika tidak ada MFA, langsung menuju dashboard
+          router.push('/dashboard');
+          return {
+            success: true,
+            message: data.message || 'Login successful.', // Changed
+            mfaRequired: false,
+          };
         }
-
-        return {
-          success: true,
-          message: data.message || 'Login berhasil',
-          data: data,
-        };
       } else {
         return {
           success: false,
-          message: data.message || 'Login gagal',
-          data: data,
+          message: data.message || 'Login failed.', // Changed
         };
       }
     } catch (error) {
       console.error('Login error:', error);
       return {
         success: false,
-        message: 'Terjadi kesalahan saat login. Silakan coba lagi.',
+        message: 'An error occurred during login. Please try again.', // Changed
         error: error.message,
       };
     } finally {
-      isLoading.value = false;
+      isLoadingAuth.value = false;
     }
   };
 
   // Fungsi untuk register (registrasi)
   const register = async (userData) => {
-    isLoading.value = true;
+    isLoadingAuth.value = true;
     try {
       const response = await fetch(`${baseURL}/api/v1/register`, {
         method: 'POST',
@@ -75,52 +101,12 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          full_name: userData.full_name,
+          full_name: userData.fullName,
           email: userData.email,
           username: userData.username,
-          phone: userData.phone, 
+          phone: userData.phone,
           password: userData.password
         })
-      })
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Jika registrasi berhasil, langsung arahkan ke halaman login
-        return {
-          success: true,
-          message: data.message || 'Pendaftaran berhasil',
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Pendaftaran gagal',
-        };
-      }
-    } catch (error) {
-      console.error('Register error:', error);
-      return {
-        success: false,
-        message: 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.',
-        error: error.message,
-      };
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  // Fungsi verifikasi OTP
-  const verifyOtp = async (otpCode) => {
-    isLoading.value = true;
-    try {
-      const response = await fetch(`${baseURL}/api/v1/verify-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          otp: otpCode,
-        }),
       });
 
       const data = await response.json();
@@ -128,24 +114,55 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.ok) {
         return {
           success: true,
-          message: data.message || 'Verifikasi OTP berhasil!',
+          message: data.message || 'Registration successful.', // Changed
         };
       } else {
         return {
           success: false,
-          message: data.message || 'Verifikasi OTP gagal.',
+          message: data.message || 'Registration failed.', // Changed
         };
       }
     } catch (error) {
-      console.error('OTP Verification error:', error);
+      console.error('Register error:', error);
       return {
         success: false,
-        message: 'Terjadi kesalahan saat verifikasi OTP.',
+        message: 'An error occurred during registration. Please try again.', // Changed
         error: error.message,
       };
     } finally {
-      isLoading.value = false;
+      isLoadingAuth.value = false;
     }
+  };
+
+  // Fungsi verifikasi OTP (Dummy)
+  const verifyOtp = async (otpCode) => {
+    isLoadingAuth.value = true;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (otpCode === '123456') { // OTP dummy yang benar
+      isAuthenticated.value = true;
+      router.push('/dashboard'); // Langsung arahkan ke dashboard setelah verifikasi dummy
+      return {
+        success: true,
+        message: 'OTP verification successful! (Dummy)', // Changed
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Incorrect OTP Code!', // Changed - already in English, just confirming
+      };
+    }
+  };
+
+  // Fungsi resend OTP (Dummy)
+  const resendOtp = async () => {
+    isLoadingAuth.value = true;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    return {
+      success: true,
+      message: 'A new OTP has been sent to your mobile number! (Dummy)', // Changed
+    };
   };
 
   // Fungsi logout
@@ -153,7 +170,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
     isAuthenticated.value = false;
     localStorage.removeItem('auth_token');
-    router.push('/login');  // Arahkan ke halaman login setelah logout
+    router.push('/login');
   };
 
   // Fungsi untuk mengecek status autentikasi
@@ -169,10 +186,11 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     isAuthenticated,
-    isLoading,
+    isLoadingAuth,
     login,
     register,
     verifyOtp,
+    resendOtp,
     logout,
     checkAuth,
   };
