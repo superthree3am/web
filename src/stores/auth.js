@@ -1,15 +1,34 @@
+// src/stores/auth.js
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
+  const token = ref(null);
   const isAuthenticated = ref(false);
   const isLoading = ref(false);
-  const baseURL = process.env.VUE_APP_SERVICE_API;
-  const router = useRouter();
+  const baseURL = process.env.VUE_APP_SERVICE_API || 'http://localhost:8080';
 
-  // Fungsi login
+  // --- Firebase Client SDK initialization ---
+  const firebaseConfig = {
+    apiKey: process.env.VUE_APP_FIREBASE_API_KEY,
+    authDomain: process.env.VUE_APP_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.VUE_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.VUE_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.VUE_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.VUE_APP_FIREBASE_APP_ID,
+    measurementId: process.env.VUE_APP_FIREBASE_MEASUREMENT_ID
+  };
+  const firebaseApp = initializeApp(firebaseConfig);
+  const firebaseAuth = getAuth(firebaseApp);
+
+  // --- End Firebase Client SDK initialization ---
+
+  let confirmationResult = null;
+  const currentPhoneNumber = ref(null); // Tambahkan ini untuk menyimpan nomor telepon
+
   const login = async (credentials) => {
     isLoading.value = true;
     try {
@@ -27,46 +46,110 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await response.json();
 
       if (response.ok) {
-        user.value = data.user || { username: credentials.username };
-        isAuthenticated.value = true;
-
-        if (data.token) {
+        if (data.phoneNumber) {
+          currentPhoneNumber.value = data.phoneNumber; // Simpan nomor telepon di store
+          return {
+            success: true,
+            mfaRequired: true,
+            message: data.message || 'OTP verification initiated.',
+            // phoneNumber: data.phoneNumber, // Tidak perlu lagi dikembalikan secara eksplisit
+            username: data.username,
+          };
+        } else if (data.token) {
+          token.value = data.token;
+          user.value = data.user || { username: data.username };
+          isAuthenticated.value = true;
           localStorage.setItem('auth_token', data.token);
-        }
-
-        // Cek jika MFA (OTP) diperlukan
-        if (data.mfaRequired) {
-          router.push('/otp'); // Arahkan ke halaman OTP jika MFA diperlukan
+          return {
+            success: true,
+            mfaRequired: false,
+            message: data.message || 'Login successful.',
+          };
         } else {
-          router.push('/dashboard'); // Jika tidak ada MFA, langsung menuju dashboard
+          return { success: false, message: data.message || 'Invalid server response.' };
         }
-
-        return {
-          success: true,
-          message: data.message || 'Login berhasil',
-          data: data,
-        };
       } else {
-        return {
-          success: false,
-          message: data.message || 'Login gagal',
-          data: data,
-        };
+        return { success: false, message: data.message || 'Login failed.' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return {
-        success: false,
-        message: 'Terjadi kesalahan saat login. Silakan coba lagi.',
-        error: error.message,
-      };
+      return { success: false, message: 'Network error or server unavailable.' };
     } finally {
       isLoading.value = false;
     }
   };
 
-  // Fungsi untuk register (registrasi)
-  const register = async (userData) => {
+  const sendOtpFirebase = async (recaptchaContainerId = 'recaptcha-container') => { // Hapus phoneNumber dari parameter
+    isLoading.value = true;
+    if (!currentPhoneNumber.value) { // Gunakan dari store
+      isLoading.value = false;
+      return { success: false, message: 'Phone number not available to send OTP.' };
+    }
+    try {
+      window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, recaptchaContainerId, {
+        'size': 'invisible',
+        'expired-callback': () => { /* ... */ }
+      });
+      await window.recaptchaVerifier.render();
+
+      confirmationResult = await signInWithPhoneNumber(firebaseAuth, currentPhoneNumber.value, window.recaptchaVerifier); // Gunakan dari store
+      return { success: true, message: 'OTP sent!' };
+    } catch (error) {
+      console.error("Error sending OTP via Firebase:", error);
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
+      return { success: false, message: error.message || 'Failed to send OTP via Firebase.' };
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const verifyOtpAndLoginWithFirebase = async (otpCode) => {
+    isLoading.value = true;
+    if (!confirmationResult) {
+      isLoading.value = false;
+      return { success: false, message: 'OTP flow not initiated. Please go back and try again.' };
+    }
+    try {
+      const userCredential = await confirmationResult.confirm(otpCode);
+      const firebaseIdToken = await userCredential.user.getIdToken();
+
+      const response = await fetch(`${baseURL}/api/v1/verify-firebase-id-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken: firebaseIdToken }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        token.value = data.token;
+        user.value = data.user || { username: data.username };
+        isAuthenticated.value = true;
+        localStorage.setItem('auth_token', data.token);
+        if (window.recaptchaVerifier) {
+            window.recaptchaVerifier.clear();
+        }
+        currentPhoneNumber.value = null; // Bersihkan nomor telepon dari store setelah berhasil login
+        return { success: true, message: data.message || 'Login successful via OTP.' };
+      } else {
+        return { success: false, message: data.message || 'Backend verification failed.' };
+      }
+    } catch (error) {
+      console.error("Error verifying OTP or Firebase ID Token:", error);
+      if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
+      }
+      return { success: false, message: error.message || 'OTP verification failed.' };
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const register = async (userData) => { /* ... (kode register Anda tetap sama) ... */
     isLoading.value = true;
     try {
       const response = await fetch(`${baseURL}/api/v1/register`, {
@@ -75,19 +158,17 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fullName: userData.fullName,
+          full_name: userData.fullName,
           email: userData.email,
           username: userData.username,
-          phone: userData.phone, 
-          password: userData.password,
-          full_name: userData.full_name
+          phone: userData.phone,
+          password: userData.password
         })
-      })
+      });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Jika registrasi berhasil, langsung arahkan ke halaman login
         return {
           success: true,
           message: data.message || 'Pendaftaran berhasil',
@@ -110,57 +191,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // Fungsi verifikasi OTP
-  const verifyOtp = async (otpCode) => {
-    isLoading.value = true;
-    try {
-      const response = await fetch(`${baseURL}/api/v1/verify-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          otp: otpCode,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return {
-          success: true,
-          message: data.message || 'Verifikasi OTP berhasil!',
-        };
-      } else {
-        return {
-          success: false,
-          message: data.message || 'Verifikasi OTP gagal.',
-        };
-      }
-    } catch (error) {
-      console.error('OTP Verification error:', error);
-      return {
-        success: false,
-        message: 'Terjadi kesalahan saat verifikasi OTP.',
-        error: error.message,
-      };
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  // Fungsi logout
   const logout = () => {
     user.value = null;
+    token.value = null;
     isAuthenticated.value = false;
+    currentPhoneNumber.value = null; // Bersihkan juga nomor telepon saat logout
     localStorage.removeItem('auth_token');
-    router.push('/login');  // Arahkan ke halaman login setelah logout
   };
 
-  // Fungsi untuk mengecek status autentikasi
   const checkAuth = () => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
+    const storedToken = localStorage.getItem('auth_token');
+    if (storedToken) {
+      token.value = storedToken;
       isAuthenticated.value = true;
     } else {
       isAuthenticated.value = false;
@@ -169,11 +211,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
+    token,
+    currentPhoneNumber, // Sertakan ini agar bisa diakses dari komponen
     isAuthenticated,
     isLoading,
     login,
+    sendOtpFirebase,
+    verifyOtpAndLoginWithFirebase,
     register,
-    verifyOtp,
     logout,
     checkAuth,
   };

@@ -1,9 +1,8 @@
 <template>
-  <div class="min-h-screen  flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
-      
-      <!-- Logo BNI -->
+
       <div class="flex justify-center mb-6">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
@@ -12,12 +11,10 @@
         Sign in to your account
       </h1>
 
-      <!-- Error Message -->
       <div v-if="errorMessage" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
         <span class="font-semibold">ERROR: </span>{{ errorMessage }}
       </div>
 
-      <!-- Login Form -->
       <form class="space-y-6" @submit.prevent="handleLogin">
         <BaseInput
           id="username"
@@ -34,12 +31,11 @@
           label="Password"
           type="password"
           placeholder="Enter your password"
-          autocomplete="password"
+          autocomplete="current-password"
           v-model="password"
           required
         />
 
-        <!-- Remember Me Checkbox -->
         <div class="flex items-center justify-between">
           <div class="flex items-center">
             <input
@@ -59,7 +55,6 @@
           </div>
         </div>
 
-        <!-- Login Button -->
         <div>
           <button
             type="submit"
@@ -80,7 +75,6 @@
         </div>
       </form>
 
-      <!-- Redirect to Signup -->
       <p class="mt-6 text-center text-sm text-gray-500">
         Don't have an account?
         <router-link to="/register" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out">
@@ -94,7 +88,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';  // Pinia store untuk autentikasi
+import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
 
 export default {
@@ -104,7 +98,7 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore();  // Mendapatkan Pinia store
+    const authStore = useAuthStore();
 
     const username = ref('');
     const password = ref('');
@@ -113,7 +107,7 @@ export default {
 
     const handleLogin = async () => {
       isLoading.value = true;
-      errorMessage.value = ''; // Reset error message sebelum memulai
+      errorMessage.value = '';
 
       try {
         const result = await authStore.login({
@@ -122,18 +116,17 @@ export default {
         });
 
         if (result.success) {
-          // Login berhasil, arahkan ke halaman OTP jika diperlukan
-          if (result.data.mfaRequired) {
-            router.push('/otp');
-          } else {
+          if (result.mfaRequired) {
+            // Cukup navigasi ke rute OTP tanpa params phoneNumber
+            router.push({ name: 'OTP' });
+          } else if (authStore.isAuthenticated) {
             router.push('/dashboard');
           }
         } else {
-          // Tampilkan error jika login gagal
           errorMessage.value = result.message;
         }
       } catch (error) {
-        errorMessage.value = 'Username atau Password Salah';  // Pesan error default
+        errorMessage.value = 'Failed to connect to the server. Please try again.';
       } finally {
         isLoading.value = false;
       }
