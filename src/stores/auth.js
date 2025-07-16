@@ -23,7 +23,6 @@ export const useAuthStore = defineStore('auth', () => {
   };
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
-
   // --- End Firebase Client SDK initialization ---
 
   let confirmationResult = null;
@@ -165,26 +164,25 @@ export const useAuthStore = defineStore('auth', () => {
           password: userData.password
         })
       });
-      });
 
       const data = await response.json();
 
       if (response.ok) {
         return {
           success: true,
-          message: data.message || 'Registration successful.', // Changed
+          message: data.message || 'Pendaftaran berhasil',
         };
       } else {
         return {
           success: false,
-          message: data.message || 'Registration failed.', // Changed
+          message: data.message || 'Pendaftaran gagal',
         };
       }
     } catch (error) {
       console.error('Register error:', error);
       return {
         success: false,
-        message: 'An error occurred during registration. Please try again.', // Changed
+        message: 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.',
         error: error.message,
       };
     } finally {
