@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
-  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 

@@ -13,17 +13,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   // --- Firebase Client SDK initialization ---
   const firebaseConfig = {
-    apiKey: process.env.VUE_APP_FIREBASE_API_KEY,
-    authDomain: process.env.VUE_APP_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.VUE_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.VUE_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.VUE_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.VUE_APP_FIREBASE_APP_ID,
-    measurementId: process.env.VUE_APP_FIREBASE_MEASUREMENT_ID
+    apiKey: "AIzaSyDexM23IlaX_UGOnVu-XqGCWm2MsTYhzIo",
+    authDomain: "p3am-165d0.firebaseapp.com",
+    projectId: "p3am-165d0",
+    storageBucket: "p3am-165d0.firebasestorage.app",
+    messagingSenderId: "259915858128",
+    appId: "1:259915858128:web:8e1cad616206101cdcded5",
+    measurementId: "G-VKY3VP8KKE"
   };
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
-
   // --- End Firebase Client SDK initialization ---
 
   let confirmationResult = null;
@@ -165,26 +164,25 @@ export const useAuthStore = defineStore('auth', () => {
           password: userData.password
         })
       });
-      });
 
       const data = await response.json();
 
       if (response.ok) {
         return {
           success: true,
-          message: data.message || 'Registration successful.', // Changed
+          message: data.message || 'Pendaftaran berhasil',
         };
       } else {
         return {
           success: false,
-          message: data.message || 'Registration failed.', // Changed
+          message: data.message || 'Pendaftaran gagal',
         };
       }
     } catch (error) {
       console.error('Register error:', error);
       return {
         success: false,
-        message: 'An error occurred during registration. Please try again.', // Changed
+        message: 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.',
         error: error.message,
       };
     } finally {
