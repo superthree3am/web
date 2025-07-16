@@ -1,8 +1,9 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
-      
+
       <div class="flex justify-center mb-6">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
@@ -31,7 +32,7 @@
           label="Password"
           type="password"
           placeholder="Enter your password"
-          autocomplete="password"
+          autocomplete="current-password"
           v-model="password"
           required
           :is-password-toggle="true" />
@@ -88,7 +89,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth'; // Pinia store untuk autentikasi
+import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
 
 export default {
@@ -98,7 +99,7 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore(); // Mendapatkan Pinia store
+    const authStore = useAuthStore();
 
     const username = ref('');
     const password = ref('');
@@ -107,7 +108,7 @@ export default {
 
     const handleLogin = async () => {
       isLoading.value = true;
-      errorMessage.value = ''; // Reset error message sebelum memulai
+      errorMessage.value = '';
 
       try {
         const result = await authStore.login({
@@ -116,18 +117,17 @@ export default {
         });
 
         if (result.success) {
-          // Login berhasil, arahkan ke halaman OTP jika diperlukan
-          if (result.data.mfaRequired) {
-            router.push('/otp');
-          } else {
+          if (result.mfaRequired) {
+            // Cukup navigasi ke rute OTP tanpa params phoneNumber
+            router.push({ name: 'OTP' });
+          } else if (authStore.isAuthenticated) {
             router.push('/dashboard');
           }
         } else {
-          // Tampilkan error jika login gagal
           errorMessage.value = result.message;
         }
       } catch (error) {
-        errorMessage.value = 'ERROR : Incorrect username or password'; // Pesan error default
+        errorMessage.value = 'Failed to connect to the server. Please try again.';
       } finally {
         isLoading.value = false;
       }
