@@ -2,8 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '@/views/Login/LoginPage.vue';  
 import RegisterPage from '@/views/Register/index.vue';
 import OtpPage from '@/views/Verifikasioke/OtpVerification.vue';
-import Dashboard from '@/views/Dashboard/index.vue';
-import ForgotPassword from '@/views/ForgotPassword/index.vue';  // Import ForgotPassword
+import Dashboard from '@/views/Dashboard/index.vue';// Import ForgotPassword
 
 const routes = [
   { path: '/', name: 'login', component: LoginPage },
@@ -16,8 +15,7 @@ const routes = [
     // props: true dihapus karena kita tidak lagi meneruskan data via props dari params
     meta: { requiresPhoneAuthInitiation: true }
   },
-  { path: '/dashboard', name: 'dashboard', component: Dashboard },
-  { path: '/forgot-password', name: 'forgot-password', component: ForgotPassword },  // Rute Forgot Password
+  { path: '/dashboard', name: 'dashboard', component: Dashboard }, // Rute Forgot Password
 ];
 
 const router = createRouter({
