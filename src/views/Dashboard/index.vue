@@ -17,7 +17,7 @@
 
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <!-- Header Selamat Datang -->
-      <h1 class="text-3xl font-bold text-gray-900 mb-6 animate-fade-in-up">Selamat Datang, {{ userName }}!</h1>
+      <h1 class="text-3xl font-bold text-gray-900 mb-6 animate-fade-in-up">Selamat Datang, {{ authStore.user ? authStore.user.fullName : 'Pengguna' }}!</h1>
 
       <!-- Grafik Saldo -->
       <div class="chart-container mb-8">
@@ -101,57 +101,59 @@
 
 <script>
 import { onMounted, ref } from 'vue';
-import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { Chart, LinearScale, CategoryScale, LineElement, PointElement, Title, Tooltip, Legend, LineController } from 'chart.js';
+import { useAuthStore } from '@/stores/auth'; // Import Pinia store Anda
 
 // Mendaftarkan semua komponen yang digunakan dalam chart
 Chart.register(
-  LinearScale, 
-  CategoryScale, 
-  LineElement, 
-  PointElement, 
-  Title, 
-  Tooltip, 
-  Legend, 
+  LinearScale,
+  CategoryScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
   LineController
 );
 
 export default {
   name: 'DashboardPage',
   setup() {
-    const router = useRouter();  // Mengakses router menggunakan useRouter()
-    const userName = ref('');  // Membuat referensi untuk nama pengguna
+    const router = useRouter();
+    const authStore = useAuthStore(); // Inisialisasi Pinia store
 
     // Fungsi untuk menangani logout
     const handleLogout = () => {
-      localStorage.removeItem('token');  // Menghapus token dari localStorage
-      router.push('/login');  // Redirect ke halaman login
+      authStore.logout(); // Panggil fungsi logout dari store
+      router.push('/login'); // Redirect ke halaman login
     };
 
-    // Fungsi untuk mengambil nama pengguna
-    const fetchUserName = async () => {
-      const token = localStorage.getItem('token');  // Ambil token dari localStorage
+    // Memanggil fungsi getProfile dari store saat komponen dimuat
+    onMounted(async () => {
+      // Pastikan token sudah ada di store atau localStorage
+      authStore.checkAuth();
 
-      try {
-        const response = await axios.get('/api/v1/user', {
-          headers: { Authorization: `Bearer ${token}` }  // Kirim token JWT di header
-        });
-        userName.value = response.data.username;  // Mengambil username dari response
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      // Jika tidak terautentikasi, redirect ke halaman login
+      if (!authStore.isAuthenticated) {
+        router.push('/login');
+        return; // Hentikan eksekusi lebih lanjut jika tidak terautentikasi
       }
-    };
 
-    // Memanggil fungsi fetchUserName saat komponen dimuat
-    onMounted(() => {
-      fetchUserName();
+      // Jika terautentikasi, coba ambil data profil
+      const result = await authStore.getProfile();
+      if (!result.success) {
+        console.error("Failed to fetch profile:", result.message);
+        // Jika pengambilan profil gagal (misal: token kedaluwarsa),
+        // authStore.getProfile() sudah menangani logout dan redirect.
+        // Anda bisa menambahkan logika tambahan di sini jika diperlukan.
+      }
     });
 
     // Mengembalikan fungsi dan data ke template
     return {
       handleLogout,
-      userName
+      authStore // Ekspos authStore ke template
     };
   }
 };

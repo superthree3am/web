@@ -114,7 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
       const userCredential = await confirmationResult.confirm(otpCode);
       const firebaseIdToken = await userCredential.user.getIdToken();
 
-      const response = await fetch(`${baseURL}/api/v1/verify-firebase-id-token`, {
+      const response = await fetch(`${baseURL}/api/v1/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,6 +143,51 @@ export const useAuthStore = defineStore('auth', () => {
           window.recaptchaVerifier.clear();
       }
       return { success: false, message: error.message || 'OTP verification failed.' };
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const getProfile = async () => {
+    isLoading.value = true;
+    try {
+      if (!token.value) {
+        // If token is not in store, try to get from localStorage
+        const storedToken = localStorage.getItem('auth_token');
+        if (storedToken) {
+          token.value = storedToken;
+          isAuthenticated.value = true;
+        } else {
+          isLoading.value = false;
+          return { success: false, message: 'No authentication token found.' };
+        }
+      }
+
+      const response = await fetch(`${baseURL}/api/v1/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update the user ref with the full profile data
+        user.value = { ...user.value, ...data }; // Merge existing user data with new profile data
+        return { success: true, profile: data, message: 'Profile fetched successfully.' };
+      } else {
+        // Handle 401 specifically: token might be expired or invalid
+        if (response.status === 401) {
+          logout(); // Log out user if token is invalid/expired
+          return { success: false, message: data.message || 'Unauthorized: Please log in again.' };
+        }
+        return { success: false, message: data.message || 'Failed to fetch profile.' };
+      }
+    } catch (error) {
+      console.error('Get profile error:', error);
+      return { success: false, message: 'Network error or server unavailable.' };
     } finally {
       isLoading.value = false;
     }
@@ -217,6 +262,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     sendOtpFirebase,
     verifyOtpAndLoginWithFirebase,
+    getProfile,
     register,
     logout,
     checkAuth,
