@@ -157,7 +157,7 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          full_name: userData.fullName,
+          fullName: userData.fullName,
           email: userData.email,
           username: userData.username,
           phone: userData.phone,
