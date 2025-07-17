@@ -1,11 +1,16 @@
 module.exports = {
   // ...
-  plugins: ['vitest'],
+  // plugins: ['vitest'], // HAPUS ini
   env: {
-    'vitest/globals': true, // <--- ini penting
+    // 'vitest/globals': true, // HAPUS ini
+    jest: true, // GANTI dengan ini jika perlu
   },
-  extends: [
-    // ...
-    'plugin:vitest/recommended'
+  overrides: [
+    {
+      files: ['**/*.spec.js'],
+      env: {
+        jest: true, // ini aktifkan global seperti `describe`, `it`, `expect`
+      },
+    },
   ],
 };
