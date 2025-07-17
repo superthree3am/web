@@ -20,23 +20,29 @@
 
       <p class="text-center text-gray-700 mb-6">
         Please enter the 6-digit code sent to your registered phone number.
-        <br>
+        <br />
         <span v-if="phoneNumberDisplay" class="font-semibold">{{ phoneNumberDisplay }}</span>
       </p>
 
-      <div id="recaptcha-container"></div>
-
       <form class="space-y-6" @submit.prevent="handleOtpVerification">
-        <BaseInput
-          id="otpCode"
-          label="OTP Code"
-          type="text"
-          placeholder="Enter OTP code"
-          autocomplete="one-time-code"
-          v-model="otpCode"
-          required
-          maxlength="6"
-        />
+        <!-- 6 Digit OTP Input -->
+        <div class="flex justify-center space-x-2">
+          <input
+            v-for="(digit, index) in otpDigits"
+            :key="index"
+            v-model="otpDigits[index]"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="1"
+            class="w-12 h-12 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg"
+            @input="onOtpInput(index)"
+            @keydown.backspace="onOtpBackspace(index, $event)"
+          />
+        </div>
+
+        <!-- reCAPTCHA inside the white box -->
+        <div id="recaptcha-container" class="mt-4 flex justify-center"></div>
 
         <div>
           <button
@@ -69,30 +75,44 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import BaseInput from '@/components/BaseInput.vue';
 
 export default {
   name: 'OtpPage',
-  components: {
-    BaseInput
-  },
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
 
-    const otpCode = ref('');
+    const otpDigits = ref(['', '', '', '', '', '']);
     const isLoading = ref(false);
     const isResending = ref(false);
     const errorMessage = ref('');
     const successMessage = ref('');
     const phoneNumberDisplay = ref('');
 
+    const otpCode = computed(() => otpDigits.value.join(''));
+
+    const onOtpInput = (index) => {
+      const val = otpDigits.value[index];
+      if (val.length > 1) otpDigits.value[index] = val.slice(-1);
+      if (val && index < 5) focusNextInput(index + 1);
+    };
+
+    const onOtpBackspace = (index, event) => {
+      if (event.key === 'Backspace' && !otpDigits.value[index] && index > 0) {
+        focusNextInput(index - 1);
+      }
+    };
+
+    const focusNextInput = (index) => {
+      const inputs = document.querySelectorAll('input[type="text"]');
+      if (inputs[index]) inputs[index].focus();
+    };
+
     onMounted(async () => {
       const phoneNumber = authStore.currentPhoneNumber;
-
       if (!phoneNumber) {
         errorMessage.value = 'Phone number not found. Please log in again.';
         router.push('/login');
@@ -139,11 +159,11 @@ export default {
 
     const resendOtp = async () => {
       const phoneNumber = authStore.currentPhoneNumber;
-
       if (!phoneNumber) {
         errorMessage.value = 'Phone number not found for resending OTP.';
         return;
       }
+
       isResending.value = true;
       errorMessage.value = '';
       successMessage.value = '';
@@ -151,19 +171,19 @@ export default {
       try {
         const result = await authStore.sendOtpFirebase('recaptcha-container');
         if (result.success) {
-          successMessage.value = "OTP has been re-sent.";
+          successMessage.value = 'OTP has been re-sent.';
         } else {
-          errorMessage.value = result.message || "Failed to resend OTP.";
+          errorMessage.value = result.message || 'Failed to resend OTP.';
         }
       } catch (error) {
-        errorMessage.value = "Failed to resend OTP due to an error.";
+        errorMessage.value = 'Failed to resend OTP due to an error.';
       } finally {
         isResending.value = false;
       }
     };
 
     return {
-      otpCode,
+      otpDigits,
       isLoading,
       isResending,
       errorMessage,
@@ -171,7 +191,9 @@ export default {
       phoneNumberDisplay,
       handleOtpVerification,
       resendOtp,
+      onOtpInput,
+      onOtpBackspace,
     };
-  }
+  },
 };
 </script>

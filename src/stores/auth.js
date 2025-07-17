@@ -86,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     try {
       window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, recaptchaContainerId, {
-        'size': 'invisible',
+        'size': 'normal',
         'expired-callback': () => { /* ... */ }
       });
       await window.recaptchaVerifier.render();
@@ -222,3 +222,4 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuth,
   };
 });
+

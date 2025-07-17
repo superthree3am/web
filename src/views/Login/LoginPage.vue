@@ -1,5 +1,19 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4 relative">
+    <!-- 🔄 LOADING OVERLAY -->
+    <div
+      v-if="isLoading"
+  class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center"
+>
+
+    >
+      <svg class="h-12 w-12 text-orange-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+      </svg>
+    </div>
+
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
@@ -34,7 +48,8 @@
           autocomplete="current-password"
           v-model="password"
           required
-          :is-password-toggle="true" />
+          :is-password-toggle="true"
+        />
 
         <div class="flex items-center justify-between">
           <div class="flex items-center">
@@ -60,7 +75,7 @@
             type="submit"
             :disabled="isLoading"
             class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
-                                   transition-all duration-300 ease-in-out"
+                     transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
           >
             <span v-if="!isLoading">Login</span>
@@ -106,8 +121,26 @@ export default {
     const errorMessage = ref('');
 
     const handleLogin = async () => {
-      isLoading.value = true;
       errorMessage.value = '';
+
+      const usernamePattern = /^[a-zA-Z0-9]+$/;
+
+      if (!username.value || !password.value) {
+        errorMessage.value = 'Username and password are required.';
+        return;
+      }
+
+      if (!usernamePattern.test(username.value)) {
+        errorMessage.value = 'Username can only contain letters and numbers.';
+        return;
+      }
+
+      if (password.value.length < 8) {
+        errorMessage.value = 'Password must be at least 8 characters long.';
+        return;
+      }
+
+      isLoading.value = true;
 
       try {
         const result = await authStore.login({
@@ -117,7 +150,6 @@ export default {
 
         if (result.success) {
           if (result.mfaRequired) {
-            // Cukup navigasi ke rute OTP tanpa params phoneNumber
             router.push({ name: 'OTP' });
           } else if (authStore.isAuthenticated) {
             router.push('/dashboard');
@@ -144,8 +176,6 @@ export default {
 </script>
 
 <style scoped>
-/* Anda dapat menambahkan gaya kustom di sini jika diperlukan */
-/* Misalnya, jika animate-fade-in-down tidak didefinisikan secara global */
 @keyframes fade-in-down {
   from {
     opacity: 0;
