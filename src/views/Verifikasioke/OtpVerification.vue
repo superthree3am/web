@@ -1,9 +1,20 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
+                hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out relative">
 
-      <div class="flex justify-center mb-6">
+      <!-- Tombol panah kiri -->
+      <div class="absolute top-4 left-4">
+        <button @click="goToLogin" class="flex items-center text-gray-600 hover:text-indigo-600 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          <span class="text-sm font-medium"></span>
+        </button>
+      </div>
+
+      <!-- Logo -->
+      <div class="flex justify-center mb-6 mt-4">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
 
@@ -19,13 +30,12 @@
       </div>
 
       <p class="text-center text-gray-700 mb-6">
-        Please enter the 6-digit code sent to your registered phone number.
-        <br />
+        Please enter the 6-digit code sent to your registered phone number.<br />
         <span v-if="phoneNumberDisplay" class="font-semibold">{{ phoneNumberDisplay }}</span>
       </p>
 
       <form class="space-y-6" @submit.prevent="handleOtpVerification">
-        <!-- 6 Digit OTP Input -->
+        <!-- Input OTP -->
         <div class="flex justify-center space-x-2">
           <input
             v-for="(digit, index) in otpDigits"
@@ -41,9 +51,10 @@
           />
         </div>
 
-        <!-- reCAPTCHA inside the white box -->
+        <!-- reCAPTCHA -->
         <div id="recaptcha-container" class="mt-4 flex justify-center"></div>
 
+        <!-- Tombol verifikasi -->
         <div>
           <button
             type="submit"
@@ -141,7 +152,6 @@ export default {
 
       try {
         const result = await authStore.verifyOtpAndLoginWithFirebase(otpCode.value);
-
         if (result.success) {
           successMessage.value = result.message;
           setTimeout(() => {
@@ -182,6 +192,10 @@ export default {
       }
     };
 
+    const goToLogin = () => {
+      router.push('/login');
+    };
+
     return {
       otpDigits,
       isLoading,
@@ -193,6 +207,8 @@ export default {
       resendOtp,
       onOtpInput,
       onOtpBackspace,
+      goToLogin,
+      router,
     };
   },
 };
