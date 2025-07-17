@@ -19,7 +19,7 @@
       </div>
 
       <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">
-        OTP Verification
+        Authentication Verification
       </h1>
 
       <div v-if="errorMessage" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
@@ -30,9 +30,11 @@
       </div>
 
       <p class="text-center text-gray-700 mb-6">
-        Please enter the 6-digit code sent to your registered phone number.<br />
+        Enter the OTP code that has been sent to your registered mobile number.<br />
         <span v-if="phoneNumberDisplay" class="font-semibold">{{ phoneNumberDisplay }}</span>
       </p>
+
+      <p class="text-center text-gray-700 font-semibold mb-4">OTP Code (6 Digits)</p>
 
       <form class="space-y-6" @submit.prevent="handleOtpVerification">
         <!-- Input OTP -->
