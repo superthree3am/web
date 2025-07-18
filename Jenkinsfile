@@ -3,10 +3,11 @@ pipeline {
 
   environment {
     NODE_ENV = "development"
+    NODE_OPTIONS = "--max-old-space-size=2048"
   }
 
   tools {
-    nodejs "NodeJS 20.19.0" // Pastikan NodeJS ini sudah disiapkan di Jenkins > Global Tool Configuration
+    nodejs "NodeJS 20.19.0"
   }
 
   stages {
@@ -18,9 +19,7 @@ pipeline {
 
     stage('Install Yarn & Dependencies') {
       steps {
-        // ✅ Install yarn jika belum tersedia
         sh 'npm install -g yarn'
-        sh 'yarn --version'  // Cek versi sebagai validasi
         sh 'yarn install'
       }
     }
@@ -37,11 +36,12 @@ pipeline {
       }
     }
 
-    stage('Test') {
-  steps {
-    sh 'yarn test'
-  }
-}
+    stage('Test & Coverage') {
+      steps {
+        sh 'yarn vitest run --coverage'
+        sh 'ls -lh coverage/lcov.info || echo "❌ lcov.info missing!"'
+      }
+    }
 
     stage('SonarQube Analysis') {
       steps {
@@ -54,10 +54,10 @@ pipeline {
 
   post {
     success {
-      echo '✅ Build, Lint, dan SonarQube analysis sukses!'
+      echo '✅ Build, Lint, Test, dan SonarQube analysis sukses!'
     }
     failure {
-      echo '❌ Build atau SonarQube analysis gagal.'
+      echo '❌ Build, Test, atau SonarQube analysis gagal.'
     }
   }
 }
