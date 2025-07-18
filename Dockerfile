@@ -3,7 +3,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN sudo npm install
+RUN sudo npm install && chown -R node:node /app
 
 COPY . .
 
@@ -13,10 +13,6 @@ COPY . .
 # Bersihkan cache build agar image lebih kecil dan tidak error permission
 RUN rm -rf /app/node_modules/.cache
 
-# Pastikan folder dimiliki user node, supaya tidak error di runtime
-RUN chown -R node:node /app
-
-USER node
 
 EXPOSE 5173
 CMD ["npm", "run", "serve"]
