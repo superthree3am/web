@@ -103,7 +103,6 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
 
 export default {
@@ -113,7 +112,6 @@ export default {
   },
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore();
 
     const username = ref('');
     const password = ref('');
