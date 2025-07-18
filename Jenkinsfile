@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     NODE_ENV = "development"
-    NODE_OPTIONS = "--max-old-space-size=2048"
+    NODE_OPTIONS = "--max-old-space-size=4096"
   }
 
   tools {
