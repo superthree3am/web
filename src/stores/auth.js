@@ -1,4 +1,3 @@
-// src/stores/auth.js
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { initializeApp } from 'firebase/app';
@@ -26,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   // --- End Firebase Client SDK initialization ---
 
   let confirmationResult = null;
-  const currentPhoneNumber = ref(null); // Tambahkan ini untuk menyimpan nomor telepon
+  const currentPhoneNumber = ref(null);
 
   const login = async (credentials) => {
     isLoading.value = true;
@@ -46,12 +45,11 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (response.ok) {
         if (data.phoneNumber) {
-          currentPhoneNumber.value = data.phoneNumber; // Simpan nomor telepon di store
+          currentPhoneNumber.value = data.phoneNumber;
           return {
             success: true,
             mfaRequired: true,
             message: data.message || 'OTP verification initiated.',
-            // phoneNumber: data.phoneNumber, // Tidak perlu lagi dikembalikan secara eksplisit
             username: data.username,
           };
         } else if (data.token) {
@@ -78,27 +76,45 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  const sendOtpFirebase = async (recaptchaContainerId = 'recaptcha-container') => { // Hapus phoneNumber dari parameter
+  const sendOtpFirebase = async (recaptchaContainerId = 'recaptcha-container') => {
     isLoading.value = true;
-    if (!currentPhoneNumber.value) { // Gunakan dari store
+    if (!currentPhoneNumber.value) {
       isLoading.value = false;
       return { success: false, message: 'Phone number not available to send OTP.' };
     }
     try {
       window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, recaptchaContainerId, {
         'size': 'normal',
-        'expired-callback': () => { /* ... */ }
+        'expired-callback': () => { /* Optional expired handler */ }
       });
       await window.recaptchaVerifier.render();
 
-      confirmationResult = await signInWithPhoneNumber(firebaseAuth, currentPhoneNumber.value, window.recaptchaVerifier); // Gunakan dari store
+      confirmationResult = await signInWithPhoneNumber(firebaseAuth, currentPhoneNumber.value, window.recaptchaVerifier);
       return { success: true, message: 'OTP sent!' };
     } catch (error) {
       console.error("Error sending OTP via Firebase:", error);
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
       }
-      return { success: false, message: error.message || 'Failed to send OTP via Firebase.' };
+      let errorMessage = error.message || 'Failed to send OTP via Firebase.';
+      switch (error.code) {
+        case 'auth/invalid-phone-number':
+          errorMessage = 'Invalid phone number format.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many OTP requests. Please try again later.';
+          break;
+        case 'auth/argument-error':
+          errorMessage = 'Internal error during OTP request. Please try again.';
+          break;
+        case 'auth/captcha-check-failed':
+          errorMessage = 'reCAPTCHA challenge failed. Please try again.';
+          break;
+        case 'auth/web-storage-unsupported':
+          errorMessage = 'Browser storage not supported. Use a different browser or enable cookies.';
+          break;
+      }
+      return { success: false, message: errorMessage };
     } finally {
       isLoading.value = false;
     }
@@ -108,7 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     if (!confirmationResult) {
       isLoading.value = false;
-      return { success: false, message: 'OTP flow not initiated. Please go back and try again.' };
+      return { success: false, message: 'OTP flow not initiated. Please try again.' };
     }
     try {
       const userCredential = await confirmationResult.confirm(otpCode);
@@ -129,20 +145,24 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = data.user || { username: data.username };
         isAuthenticated.value = true;
         localStorage.setItem('auth_token', data.token);
-        if (window.recaptchaVerifier) {
-            window.recaptchaVerifier.clear();
-        }
-        currentPhoneNumber.value = null; // Bersihkan nomor telepon dari store setelah berhasil login
+        if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+        currentPhoneNumber.value = null;
         return { success: true, message: data.message || 'Login successful via OTP.' };
       } else {
         return { success: false, message: data.message || 'Backend verification failed.' };
       }
     } catch (error) {
-      console.error("Error verifying OTP or Firebase ID Token:", error);
-      if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.clear();
+      console.error("OTP verification error:", error);
+      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+      let errorMessage = error.message || 'OTP verification failed.';
+      if (error.code === 'auth/invalid-verification-code') {
+        errorMessage = 'Incorrect OTP code!';
+      } else if (error.code === 'auth/code-expired') {
+        errorMessage = 'OTP expired. Please resend.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many attempts. Try again later.';
       }
-      return { success: false, message: error.message || 'OTP verification failed.' };
+      return { success: false, message: errorMessage };
     } finally {
       isLoading.value = false;
     }
@@ -152,7 +172,6 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       if (!token.value) {
-        // If token is not in store, try to get from localStorage
         const storedToken = localStorage.getItem('auth_token');
         if (storedToken) {
           token.value = storedToken;
@@ -174,13 +193,11 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Update the user ref with the full profile data
-        user.value = { ...user.value, ...data }; // Merge existing user data with new profile data
+        user.value = { ...user.value, ...data };
         return { success: true, profile: data, message: 'Profile fetched successfully.' };
       } else {
-        // Handle 401 specifically: token might be expired or invalid
         if (response.status === 401) {
-          logout(); // Log out user if token is invalid/expired
+          logout();
           return { success: false, message: data.message || 'Unauthorized: Please log in again.' };
         }
         return { success: false, message: data.message || 'Failed to fetch profile.' };
@@ -193,7 +210,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  const register = async (userData) => { /* ... (kode register Anda tetap sama) ... */
+  const register = async (userData) => {
     isLoading.value = true;
     try {
       const response = await fetch(`${baseURL}/api/v1/register`, {
@@ -215,19 +232,19 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.ok) {
         return {
           success: true,
-          message: data.message || 'Pendaftaran berhasil',
+          message: data.message || 'Registration successful',
         };
       } else {
         return {
           success: false,
-          message: data.message || 'Pendaftaran gagal',
+          message: data.message || 'Registration failed',
         };
       }
     } catch (error) {
       console.error('Register error:', error);
       return {
         success: false,
-        message: 'Terjadi kesalahan saat pendaftaran. Silakan coba lagi.',
+        message: 'An error occurred during registration. Please try again.',
         error: error.message,
       };
     } finally {
@@ -235,11 +252,25 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  const logout = () => {
+  // ✅ VERSI BARU - Logout panggil backend /logout dan bersihkan state frontend
+  const logout = async () => {
+    try {
+      await fetch(`${baseURL}/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.value}`,
+        },
+        credentials: 'include', // jika backend pakai cookie
+      });
+    } catch (error) {
+      console.error('Logout API error:', error);
+    }
+
     user.value = null;
     token.value = null;
     isAuthenticated.value = false;
-    currentPhoneNumber.value = null; // Bersihkan juga nomor telepon saat logout
+    currentPhoneNumber.value = null;
     localStorage.removeItem('auth_token');
   };
 
@@ -256,7 +287,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     token,
-    currentPhoneNumber, // Sertakan ini agar bisa diakses dari komponen
+    currentPhoneNumber,
     isAuthenticated,
     isLoading,
     login,
@@ -268,4 +299,3 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuth,
   };
 });
-
