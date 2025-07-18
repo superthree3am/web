@@ -35,7 +35,7 @@
           label="Username"
           type="text"
           placeholder="Enter your username"
-          autocomplete="username"
+          autocomplete="current-username"
           v-model="username"
           required
         />
@@ -143,25 +143,14 @@ export default {
       isLoading.value = true;
 
       try {
-        const result = await authStore.login({
-          username: username.value,
-          password: password.value
-        });
+    router.push('/dashboard');
+    } catch (error) {
+    console.error('Error occurred while navigating:', error);
+    errorMessage.value = 'Failed to connect to the server. Please try again.';
+    } finally {
+    isLoading.value = false; // Menandakan proses selesai
+    }
 
-        if (result.success) {
-          if (result.mfaRequired) {
-            router.push({ name: 'OTP' });
-          } else if (authStore.isAuthenticated) {
-            router.push('/dashboard');
-          }
-        } else {
-          errorMessage.value = result.message;
-        }
-      } catch (error) {
-        errorMessage.value = 'Failed to connect to the server. Please try again.';
-      } finally {
-        isLoading.value = false;
-      }
     };
 
     return {

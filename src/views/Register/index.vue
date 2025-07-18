@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
@@ -148,14 +148,17 @@ const passwordStrengthLabel = computed(() => {
 });
 
 const passwordStrengthClass = computed(() => {
-  return [
-    'transition-all duration-300',
-    passwordStrength.value <= 1 ? 'bg-red-400 w-1/5' :
-    passwordStrength.value === 2 ? 'bg-orange-400 w-2/5' :
-    passwordStrength.value === 3 ? 'bg-yellow-400 w-3/5' :
-    passwordStrength.value === 4 ? 'bg-green-400 w-4/5' :
-    'bg-green-600 w-full'
-  ];
+  if (passwordStrength.value <= 1) {
+    return 'bg-red-400 w-1/5';
+  } else if (passwordStrength.value === 2) {
+    return 'bg-orange-400 w-2/5';
+  } else if (passwordStrength.value === 3) {
+    return 'bg-yellow-400 w-3/5';
+  } else if (passwordStrength.value === 4) {
+    return 'bg-green-400 w-4/5';
+  } else {
+    return 'bg-green-600 w-full';
+  }
 });
 
 const handleRegister = async () => {

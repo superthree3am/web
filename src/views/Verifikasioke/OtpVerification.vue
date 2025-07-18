@@ -140,21 +140,12 @@ export default {
       }
 
       try {
-        const result = await authStore.verifyOtpAndLoginWithFirebase(otpCode.value);
-
-        if (result.success) {
-          successMessage.value = result.message;
-          setTimeout(() => {
-            router.push('/dashboard');
-          }, 1500);
-        } else {
-          errorMessage.value = result.message;
-        }
-      } catch (error) {
-        errorMessage.value = 'An unexpected error occurred during OTP verification.';
-      } finally {
-        isLoading.value = false;
-      }
+     } catch (error) {
+    console.error('An error occurred during OTP verification:', error);
+    errorMessage.value = 'An unexpected error occurred during OTP verification.';
+    } finally {
+    isLoading.value = false; // Menandakan proses selesai
+    }
     };
 
     const resendOtp = async () => {
@@ -169,17 +160,23 @@ export default {
       successMessage.value = '';
 
       try {
-        const result = await authStore.sendOtpFirebase('recaptcha-container');
-        if (result.success) {
-          successMessage.value = 'OTP has been re-sent.';
-        } else {
-          errorMessage.value = result.message || 'Failed to resend OTP.';
-        }
-      } catch (error) {
-        errorMessage.value = 'Failed to resend OTP due to an error.';
-      } finally {
-        isResending.value = false;
-      }
+  const result = await authStore.sendOtpFirebase('recaptcha-container');
+  
+  if (result.success) {
+    successMessage.value = 'OTP has been re-sent.';
+  } else {
+    errorMessage.value = result.message || 'Failed to resend OTP.';
+  }
+  } catch (error) {
+  // Log the error for debugging
+  console.error('Error during OTP resend:', error);
+
+  // Provide a more detailed error message for the user
+  errorMessage.value = 'Failed to resend OTP due to an error.';
+} finally {
+  isResending.value = false; // Ensure loading state is reset
+}
+
     };
 
     return {

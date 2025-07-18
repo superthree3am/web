@@ -36,11 +36,12 @@ export default {
         const response = await axios.get(`${apiUrl}/v1/register`); // Gantilah `/endpoint` dengan endpoint yang sesuai
         
         this.data = response.data; // Menyimpan data yang didapat dari API
-      } catch (error) {
-        this.errorMessage = 'Terjadi kesalahan saat mengambil data dari API'; // Menampilkan error
-      } finally {
-        this.isLoading = false; // Menandakan proses selesai
-      }
+        } catch (error) {
+          console.error('Error retrieving data from API:', error); // Menangani error dengan logging
+           this.errorMessage = 'Terjadi kesalahan saat mengambil data dari API'; // Menampilkan error ke pengguna
+        } finally {
+          this.isLoading = false; // Menandakan proses selesai
+       }
     },
   },
 };
