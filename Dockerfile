@@ -1,25 +1,16 @@
-FROM node:18-alpine
-
+# Build Stage
+FROM node:20-alpine AS build-stage
 WORKDIR /app
-
-# 1. Copy package file & install dependencies SEBAGAI ROOT (default user di Docker)
 COPY package*.json ./
-RUN npm install
-
-# 2. Copy source code
+RUN yarn install --frozen-lockfile
 COPY . .
+# Set environment variable VUE_APP_SERVICE_API pada saat build
+ENV VUE_APP_SERVICE_API=
+RUN yarn build
 
-# 3. Fix permission (penting!)
-RUN chown -R node:node /app
-
-# 4. Opsional: Build kalau memang ada build step (cth. React/Vue)
-# RUN npm run build
-
-# 5. Bersihkan cache (opsional, biasanya ini enggak harus, tapi boleh)
-RUN rm -rf /app/node_modules/.cache
-
-# 6. Pindah ke user 'node'
-USER node
-
-EXPOSE 3000
-CMD ["npm", "run", "serve"]
+# Production Stage
+FROM nginx:alpine AS production-stage
+COPY --from=build-stage /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
