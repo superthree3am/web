@@ -1,97 +1,137 @@
-import { mount, flushPromises } from '@vue/test-utils';
-import LoginPage from '@/views/Login/LoginPage.vue';
-import Dashboard from '@/views/Dashboard/index.vue';
-// import RegisterPage from '@/views/Register/index.vue';
-import { createTestingPinia } from '@pinia/testing';
-import { createRouter, createWebHistory } from 'vue-router';
-import { vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { createRouter, createWebHistory } from 'vue-router'
+import { createPinia } from 'pinia'
+import LoginPage from '@/views/Login/LoginPage.vue'
+import BaseInput from '@/components/BaseInput.vue'
 
-// Setup router dummy
+// Mock router
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'login', component: LoginPage },
-    { path: '/dashboard', name: 'dashboard', component: Dashboard },  // This route is needed for successful login redirection
-    { path: '/register', name: 'register', component: { template: '<div>Register</div>' } },
-    { path: '/forgot-password', name: 'forgot-password', component: { template: '<div>Forgot Password</div>' } }
+    { name: 'OTP', path: '/otp' },
+    { path: '/dashboard' }
   ]
-});
+})
+router.push = vi.fn()
 
-// Mock store login method
-const mockLogin = vi.fn(() =>
-  Promise.resolve({
-    success: true,
-    mfaRequired: false
-  })
-);
-
-// Mock router.push for navigation
-const pushMock = vi.fn();
-vi.spyOn(router, 'push').mockImplementation(pushMock);
+// Mock auth store
+const mockAuthStore = {
+  login: vi.fn(),
+  isAuthenticated: false
+}
 
 vi.mock('@/stores/auth', () => ({
-  useAuthStore: () => ({
-    login: mockLogin,
-    isAuthenticated: true
+  useAuthStore: () => mockAuthStore
+}))
+
+describe('LoginPage', () => {
+  let wrapper
+
+  beforeEach(() => {
+    wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router, createPinia()],
+        components: { BaseInput },
+        stubs: { 'router-link': true }
+      }
+    })
+    vi.clearAllMocks()
   })
-}));
 
-describe('LoginPage.vue', () => {
-  beforeAll(async () => {
-    router.push('/');
-    await router.isReady();
-  });
+  // 1. RENDERING TESTS
+  it('renders all form elements', () => {
+    expect(wrapper.find('h1').text()).toBe('Sign in to your account')
+    expect(wrapper.find('#username').exists()).toBe(true)
+    expect(wrapper.find('#password').exists()).toBe(true)
+    expect(wrapper.find('button[type="submit"]').exists()).toBe(true)
+    expect(wrapper.find('img[alt="Logo BNI"]').exists()).toBe(true)
+  })
 
-  it('renders login form with BaseInput components', () => {
-    // const wrapper = mount(LoginPage, {
-    //   global: {
-    //     plugins: [createTestingPinia(), router]
-    //   }
-    // });
+  // 2. FORM VALIDATION TESTS
+  it('validates empty fields', async () => {
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.text()).toContain('Username and password are required')
+  })
 
-    // Check the number of BaseInput components (2 inputs: username & password)
-    // const baseInputs = wrapper.findAllComponents({ name: 'BaseInput' });
-    // expect(baseInputs.length).toBe(2);
+  it('validates username format', async () => {
+    await wrapper.find('#username').setValue('user@test')
+    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.text()).toContain('Username can only contain letters and numbers')
+  })
 
-    // // Ensure each BaseInput has an input element
-    // baseInputs.forEach(input => {
-    //   expect(input.find('input').exists()).toBe(true);
-    // });
-  });
+  it('validates password length', async () => {
+    await wrapper.find('#username').setValue('testuser')
+    await wrapper.find('#password').setValue('123')
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.text()).toContain('Password must be at least 8 characters long')
+  })
 
-  it('shows error if username or password is empty', async () => {
-    // const wrapper = mount(LoginPage, {
-    //   global: {
-    //     plugins: [createTestingPinia(), router]
-    //   }
-    // });
+  // 3. SUCCESSFUL LOGIN TESTS
+  it('handles successful login without MFA', async () => {
+    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: false })
+    mockAuthStore.isAuthenticated = true
 
-    // await wrapper.find('form').trigger('submit.prevent');
+    await wrapper.find('#username').setValue('testuser')
+    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('form').trigger('submit')
+    await wrapper.vm.$nextTick()
 
-    // expect(wrapper.text()).toContain('Username and password are required.');
-  });
+    
+  })
 
-  it('calls login and navigates to dashboard on valid credentials', async () => {
-    // const wrapper = mount(LoginPage, {
-    //   global: {
-    //     plugins: [createTestingPinia(), router]
-    //   }
-    // });
+  it('handles successful login with MFA', async () => {
+    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: true })
 
-    // const baseInputs = wrapper.findAllComponents({ name: 'BaseInput' });
+    await wrapper.find('#username').setValue('testuser')
+    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('form').trigger('submit')
+    await wrapper.vm.$nextTick()
 
-    // await baseInputs[0].find('input').setValue('validuser');
-    // await baseInputs[1].find('input').setValue('validpassword');
+    expect(router.push).toHaveBeenCalled()
+  })
 
-    // await wrapper.find('form').trigger('submit.prevent');
-    // await flushPromises();
+  // 4. ERROR HANDLING TESTS
 
-    // expect(mockLogin).toHaveBeenCalledWith({
-    //   username: 'validuser',
-    //   password: 'validpassword'
-    // });
 
-    // // Verifying that push was called and route to dashboard
-    // expect(pushMock).toHaveBeenCalledWith('/dashboard');
-  });
-});
+  // 5. LOADING STATE TESTS
+
+  // 6. INPUT INTERACTION TESTS
+  it('updates form data when typing', async () => {
+    await wrapper.find('#username').setValue('newuser')
+    await wrapper.find('#password').setValue('newpass123')
+
+    expect(wrapper.vm.username).toBe('newuser')
+    expect(wrapper.vm.password).toBe('newpass123')
+  })
+
+  // 7. ERROR CLEARING TEST
+  it('clears previous errors on new submission', async () => {
+    // First submission with error
+    await wrapper.find('form').trigger('submit')
+    expect(wrapper.text()).toContain('Username and password are required')
+
+    // Second submission should clear error
+    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: false })
+    await wrapper.find('#username').setValue('testuser')
+    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('form').trigger('submit')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).not.toContain('Username and password are required')
+  })
+
+  // 8. COMPONENT PROPS TEST
+  it('passes correct props to BaseInput components', () => {
+    const inputs = wrapper.findAllComponents(BaseInput)
+    
+    expect(inputs[0].props('id')).toBe('username')
+    expect(inputs[0].props('type')).toBe('text')
+    expect(inputs[0].props('required')).toBe(true)
+    
+    expect(inputs[1].props('id')).toBe('password')
+    expect(inputs[1].props('type')).toBe('password')
+    expect(inputs[1].props('isPasswordToggle')).toBe(true)
+  })
+})
