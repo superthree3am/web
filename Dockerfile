@@ -21,5 +21,5 @@ RUN rm -rf /app/node_modules/.cache
 # 6. Pindah ke user 'node'
 USER node
 
-EXPOSE 5173
+EXPOSE 3000
 CMD ["npm", "run", "serve"]
