@@ -1,8 +1,7 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-      
-      <!-- Heading -->
+
       <h1 class="text-3xl font-extrabold text-center text-gray-900 mb-6">
         Forgot your password?
       </h1>
@@ -10,12 +9,10 @@
         Enter your email address to receive a reset token.
       </p>
 
-      <!-- Error Message -->
-      <div v-if="errorMessage" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
-        <span class="font-semibold">ERROR: </span>{{ errorMessage }}
+      <div v-if="authStore.error.value" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
+        <span class="font-semibold">ERROR: </span>{{ authStore.error.value }}
       </div>
 
-      <!-- Form -->
       <form class="space-y-6" @submit.prevent="handleResetPassword">
         <div class="space-y-2">
           <label for="userEmail" class="block text-sm font-medium text-gray-700">Email address</label>
@@ -29,15 +26,12 @@
           />
         </div>
 
-        <!-- Button -->
         <div>
           <button
             type="submit"
-            :disabled="isLoading"
-            class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300"
+            :disabled="authStore.isLoading.value" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300"
           >
-            <span v-if="!isLoading">Reset Password</span>
-            <span v-else class="flex items-center justify-center">
+            <span v-if="!authStore.isLoading.value">Reset Password</span> <span v-else class="flex items-center justify-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -48,9 +42,8 @@
         </div>
       </form>
 
-      <!-- Link to Login -->
       <p class="mt-6 text-center text-sm text-gray-500">
-        Remembered your password ? 
+        Remembered your password ?
         <router-link to="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
           Back to login
         </router-link>
@@ -62,42 +55,50 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';  // Pinia store untuk autentikasi
+import { useAuthStore } from '@/stores/auth'; // Pinia store untuk autentikasi
 
 export default {
   name: 'ForgotPasswordPage',
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore();
+    const authStore = useAuthStore(); // Dapatkan instance Pinia store
 
     const emailOrUsername = ref('');
-    const isLoading = ref(false);
-    const errorMessage = ref('');
+    // isLoading dan errorMessage sekarang akan diambil langsung dari authStore
+    // const isLoading = ref(false); // Dihapus, karena state ini dikelola di store
+    // const errorMessage = ref(''); // Dihapus, karena state ini dikelola di store
 
     const handleResetPassword = async () => {
-      isLoading.value = true;
-      errorMessage.value = '';
+      // Tidak perlu mengatur isLoading.value = true atau false di sini.
+      // Store yang akan mengelola state loading dan error.
+      // errorMessage.value = ''; // Tidak perlu mereset error secara manual di sini jika store yang mengelola
 
       try {
+        // Panggil aksi resetPassword dari store
         const result = await authStore.resetPassword({ emailOrUsername: emailOrUsername.value });
 
         if (result.success) {
           router.push('/login'); // Redirect setelah sukses
         } else {
-          errorMessage.value = result.message;
+          // Jika store mengembalikan pesan error secara eksplisit:
+          if (result.message) {
+             authStore.error.value = result.message; // Store the specific error message
+          }
+          // Jika store tidak mengembalikan pesan spesifik, store.error.value sudah diatur oleh store
+          // Atau, Anda bisa menetapkan pesan default di sini jika store tidak mengaturnya:
+          // if (!authStore.error.value) { authStore.error.value = 'Failed to reset password.'; }
         }
       } catch (error) {
-        errorMessage.value = 'Terjadi kesalahan, coba lagi.';
-      } finally {
-        isLoading.value = false;
+        // Tangani kesalahan tak terduga (misalnya, masalah jaringan)
+        authStore.error.value = 'Terjadi kesalahan, coba lagi.';
       }
+      // Tidak ada finally block lagi di sini karena store yang mengelola isLoading
     };
 
     return {
       // Data yang akan tersedia di template
       emailOrUsername,
-      isLoading,
-      errorMessage,
+      authStore, // Ekspos seluruh authStore agar bisa diakses di template (e.g., authStore.isLoading.value)
       handleResetPassword
     };
   }

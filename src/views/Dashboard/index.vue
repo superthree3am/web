@@ -99,7 +99,7 @@
 </template>
 
 <script>
-import { onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Chart, LinearScale, CategoryScale, LineElement, PointElement, Title, Tooltip, Legend, LineController } from 'chart.js';
 import { useAuthStore } from '@/stores/auth'; 
