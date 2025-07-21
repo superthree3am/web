@@ -10,7 +10,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false);
   const baseURL = process.env.VUE_APP_SERVICE_API || 'http://localhost:8080';
 
-  // --- Firebase Client SDK initialization ---
   const firebaseConfig = {
     apiKey: process.env.VUE_APP_FIREBASE_API_KEY,
     authDomain: process.env.VUE_APP_FIREBASE_AUTH_DOMAIN,
@@ -22,7 +21,6 @@ export const useAuthStore = defineStore('auth', () => {
   };
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
-  // --- End Firebase Client SDK initialization ---
 
   let confirmationResult = null;
   const currentPhoneNumber = ref(null);
@@ -252,7 +250,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // ✅ VERSI BARU - Logout panggil backend /logout dan bersihkan state frontend
+
   const logout = async () => {
     try {
       await fetch(`${baseURL}/logout`, {

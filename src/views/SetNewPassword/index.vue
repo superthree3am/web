@@ -89,7 +89,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router'; // useRoute masih diperlukan untuk routing secara umum, tapi tidak untuk membaca token
+import { useRouter } from 'vue-router'; // useRoute masih diperlukan untuk routing secara umum, tapi tidak untuk membaca token
 import BaseInput from '@/components/BaseInput.vue';
 import AlertMessage from '@/components/AlertMessage.vue';
 
@@ -100,7 +100,6 @@ export default {
     AlertMessage,
   },
   setup() {
-    const route = useRoute(); // Tetap import jika ada kebutuhan lain membaca route params
     const router = useRouter();
     const newPassword = ref('');
     const confirmPassword = ref('');

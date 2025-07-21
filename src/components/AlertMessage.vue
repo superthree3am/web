@@ -39,15 +39,15 @@ export default {
     },
     type: {
       type: String,
-      default: 'info', // 'info', 'success', 'error'
+      default: 'info', 
     },
     isVisible: {
       type: Boolean,
       default: false,
     },
-    duration: { // Durasi alert akan otomatis hilang, 0 berarti manual close
+    duration: { 
       type: Number,
-      default: 0, // Default 3 detik
+      default: 0, 
     }
   },
   emits: ['update:isVisible'],
@@ -84,23 +84,21 @@ export default {
 
     const closeAlert = () => {
       emit('update:isVisible', false);
-      clearTimeout(timeoutId); // Hapus timer jika alert ditutup manual
+      clearTimeout(timeoutId); 
     };
 
-    // Watcher untuk properti isVisible
     watch(() => props.isVisible, (newValue) => {
       if (newValue && autoClose.value) {
-        // Hapus timer sebelumnya jika ada
+
         clearTimeout(timeoutId);
-        // Set timer baru untuk menyembunyikan alert
+        
         timeoutId = setTimeout(() => {
           emit('update:isVisible', false);
         }, props.duration);
       } else if (!newValue) {
-        // Jika alert disembunyikan (manual atau dari parent), pastikan timer juga dibersihkan
         clearTimeout(timeoutId);
       }
-    }, { immediate: true }); // Jalankan watcher segera setelah komponen dibuat
+    }, { immediate: true }); 
 
     return {
       alertClasses,
