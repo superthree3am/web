@@ -103,7 +103,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'yarn test --coverage'
+        sh 'yarn test'
       }
     }
 
