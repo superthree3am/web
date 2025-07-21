@@ -97,11 +97,11 @@ export default {
     const errorMessage = ref('');
     const successMessage = ref('');
     const phoneNumberDisplay = ref('');
-    const isRecaptchaLoading = ref(true); // Controls OTP input/button visibility initially
-    const showRecaptchaContainer = ref(true); // Controls reCAPTCHA container visibility
+    const isRecaptchaLoading = ref(true); 
+    const showRecaptchaContainer = ref(true); 
 
     const otpCode = computed(() => otpDigits.value.join(''));
-    const otpInputs = ref([]); // Ref to access OTP input elements
+    const otpInputs = ref([]);
 
     const onOtpInput = (index) => {
       const val = otpDigits.value[index];
@@ -116,7 +116,6 @@ export default {
     };
 
     const focusNextInput = (index) => {
-      // Use otpInputs ref for more robust focus management
       if (otpInputs.value[index]) {
         otpInputs.value[index].focus();
       }
@@ -129,16 +128,14 @@ export default {
     const initializeRecaptcha = async () => {
       errorMessage.value = '';
       successMessage.value = '';
-      isRecaptchaLoading.value = true; // Sembunyikan OTP input/button
-      showRecaptchaContainer.value = true; // Tampilkan reCAPTCHA container
+      isRecaptchaLoading.value = true; 
+      showRecaptchaContainer.value = true; 
 
-      // Clear the reCAPTCHA container to ensure a fresh render
       const recaptchaEl = document.getElementById('recaptcha-container');
       if (recaptchaEl) {
-        recaptchaEl.innerHTML = ''; // Penting: Membersihkan container
+        recaptchaEl.innerHTML = ''; 
       }
 
-      // Pastikan DOM sudah diperbarui sebelum Firebase mencoba merender reCAPTCHA
       await nextTick();
 
       const result = await authStore.sendOtpFirebase('recaptcha-container');
@@ -149,7 +146,7 @@ export default {
         showRecaptchaContainer.value = false; 
         // Clear OTP input fields for new OTP
         otpDigits.value = ['', '', '', '', '', ''];
-        await nextTick(); // Ensure inputs are rendered before focusing
+        await nextTick(); 
         if (otpInputs.value[0]) {
           otpInputs.value[0].focus();
         }
@@ -193,7 +190,6 @@ export default {
           }, 1500);
         } else {
           errorMessage.value = result.message;
-          // Tidak ada perubahan di sini, errorMessage akan ditampilkan di atas form
         }
       } catch (error) {
         errorMessage.value = 'An unexpected error occurred during OTP verification.';
@@ -210,9 +206,8 @@ export default {
       }
 
       isResending.value = true;
-      isLoading.value = true; // Disable verify button during resend process
+      isLoading.value = true; 
 
-      // Re-initialize reCAPTCHA, which will hide OTP inputs, then show them again
       await initializeRecaptcha();
 
       isResending.value = false;
@@ -233,14 +228,13 @@ export default {
       onOtpInput,
       onOtpBackspace,
       goBack,
-      otpInputs // Make otpInputs ref available in template
+      otpInputs 
     };
   },
 };
 </script>
 
 <style scoped>
-/* Tambahkan atau sesuaikan gaya CSS sesuai kebutuhan */
 .error {
   color: red;
 }

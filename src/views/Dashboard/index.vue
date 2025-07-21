@@ -35,7 +35,6 @@
         </div>
       </div>
 
-      <!-- Card Transaksi Terakhir, Poin Reward, Tagihan -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="hover-card bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600">
           <dl class="px-4 py-5 sm:p-6">
@@ -63,7 +62,7 @@
         </div>
       </div>
 
-      <!-- Riwayat Transaksi -->
+
       <div class="bg-white overflow-hidden shadow-md rounded-lg hover:shadow-lg hover:scale-[1.01] transition-all duration-300 ease-in-out">
         <div class="px-4 py-5 sm:p-6">
           <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Riwayat Transaksi Terbaru</h3>
@@ -103,9 +102,9 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Chart, LinearScale, CategoryScale, LineElement, PointElement, Title, Tooltip, Legend, LineController } from 'chart.js';
-import { useAuthStore } from '@/stores/auth'; // Import Pinia store Anda
+import { useAuthStore } from '@/stores/auth'; 
 
-// Mendaftarkan semua komponen yang digunakan dalam chart
+
 Chart.register(
   LinearScale,
   CategoryScale,
@@ -121,39 +120,30 @@ export default {
   name: 'DashboardPage',
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore(); // Inisialisasi Pinia store
+    const authStore = useAuthStore(); 
 
-    // Fungsi untuk menangani logout
     const handleLogout = () => {
-      authStore.logout(); // Panggil fungsi logout dari store
-      router.push('/login'); // Redirect ke halaman login
+      authStore.logout(); 
+      router.push('/login'); 
     };
 
-    // Memanggil fungsi getProfile dari store saat komponen dimuat
     onMounted(async () => {
-      // Pastikan token sudah ada di store atau localStorage
       authStore.checkAuth();
 
-      // Jika tidak terautentikasi, redirect ke halaman login
       if (!authStore.isAuthenticated) {
         router.push('/login');
-        return; // Hentikan eksekusi lebih lanjut jika tidak terautentikasi
+        return; 
       }
 
-      // Jika terautentikasi, coba ambil data profil
       const result = await authStore.getProfile();
       if (!result.success) {
         console.error("Failed to fetch profile:", result.message);
-        // Jika pengambilan profil gagal (misal: token kedaluwarsa),
-        // authStore.getProfile() sudah menangani logout dan redirect.
-        // Anda bisa menambahkan logika tambahan di sini jika diperlukan.
       }
     });
 
-    // Mengembalikan fungsi dan data ke template
     return {
       handleLogout,
-      authStore // Ekspos authStore ke template
+      authStore 
     };
   }
 };
@@ -182,7 +172,7 @@ export default {
 .hover-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  background-color: rgba(0, 0, 0, 0.1); /* Efek hover untuk memberi kesan lebih interaktif */
+  background-color: rgba(0, 0, 0, 0.1); 
 }
 
 .chart-container {

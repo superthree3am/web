@@ -120,49 +120,62 @@ export default {
     const isLoading = ref(false);
     const errorMessage = ref('');
 
-    const handleLogin = async () => {
-      errorMessage.value = '';
+   const handleLogin = async () => {
+    errorMessage.value = '';
+    isLoading.value = true;
 
-      const usernamePattern = /^[a-zA-Z0-9]+$/;
+    if (!username.value) {
+      errorMessage.value = 'Username required.'; 
+      isLoading.value = false;
+      return;
+    }
+    const usernamePattern = /^[a-zA-Z0-9]+$/;
+    if (!usernamePattern.test(username.value)) {
+      errorMessage.value = 'Incorrect username or password.'; 
+      isLoading.value = false;
+      return;
+    }
 
-      if (!username.value || !password.value) {
-        errorMessage.value = 'Username and password are required.';
-        return;
-      }
+    if (!password.value) {
+      errorMessage.value = 'Password required.'; 
+      isLoading.value = false;
+      return;
+    }
+    if (password.value.length < 8) {
+      errorMessage.value = 'Incorrect username or password.'; 
+      isLoading.value = false;
+      return;
+    }
+    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':"\\|,.<>/?~`]).{8,}$/;
+    if (!passwordPattern.test(password.value)) {
+      errorMessage.value = 'Incorrect username or password.'; 
+      isLoading.value = false;
+      return;
+    }
 
-      if (!usernamePattern.test(username.value)) {
-        errorMessage.value = 'Username can only contain letters and numbers.';
-        return;
-      }
+    try {
+      const result = await authStore.login({
+        username: username.value,
+        password: password.value
+      });
 
-      if (password.value.length < 8) {
-        errorMessage.value = 'Password must be at least 8 characters long.';
-        return;
-      }
-
-      isLoading.value = true;
-
-      try {
-        const result = await authStore.login({
-          username: username.value,
-          password: password.value
-        });
-
-        if (result.success) {
-          if (result.mfaRequired) {
-            router.push({ name: 'OTP' });
-          } else if (authStore.isAuthenticated) {
-            router.push('/dashboard');
-          }
-        } else {
-          errorMessage.value = result.message;
+      if (result.success) {
+        if (result.mfaRequired) {
+          router.push({ name: 'OTP' });
+        } else if (authStore.isAuthenticated) {
+          router.push('/dashboard');
         }
-      } catch (error) {
-        errorMessage.value = 'Failed to connect to the server. Please try again.';
-      } finally {
-        isLoading.value = false;
+      } else {
+        errorMessage.value = 'Incorrect username or password.';
       }
-    };
+    } catch (error) {
+      console.error('Login process error:', error);
+      errorMessage.value = 'Failed to connect to the server. Please try again.';
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
 
     return {
       username,

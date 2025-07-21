@@ -16,9 +16,9 @@ export default {
   name: 'ApiDataComponent',
   data() {
     return {
-      data: null, // Menyimpan data dari API
-      isLoading: false, // Menyimpan status loading
-      errorMessage: '', // Menyimpan pesan error
+      data: null, 
+      isLoading: false, 
+      errorMessage: '', 
     };
   },
   created() {
@@ -26,20 +26,19 @@ export default {
   },
   methods: {
     async fetchData() {
-      this.isLoading = true; // Menandakan proses sedang berlangsung
-      this.errorMessage = ''; // Reset pesan error
+      this.isLoading = true; 
+      this.errorMessage = ''; 
       try {
-        // Menggunakan URL dari variabel lingkungan
+        
         const apiUrl = process.env.VUE_APP_SERVICE_API;
         
-        // Membuat permintaan GET menggunakan axios
-        const response = await axios.get(`${apiUrl}/v1/register`); // Gantilah `/endpoint` dengan endpoint yang sesuai
+        const response = await axios.get(`${apiUrl}/v1/register`); 
         
-        this.data = response.data; // Menyimpan data yang didapat dari API
+        this.data = response.data; 
       } catch (error) {
-        this.errorMessage = 'Terjadi kesalahan saat mengambil data dari API'; // Menampilkan error
+        this.errorMessage = 'An error occurred while fetching data from the API'; 
       } finally {
-        this.isLoading = false; // Menandakan proses selesai
+        this.isLoading = false; 
       }
     },
   },
