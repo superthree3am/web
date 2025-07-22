@@ -1,22 +1,26 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 relative">
+  <div class="min-h-screen flex items-center justify-center p-4 relative bg-gradient-to-r from-blue-500 to-indigo-600">
     <!-- 🔄 LOADING OVERLAY -->
-    <div
-      v-if="isLoading"
-  class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center"
->
-
-    >
+    <div v-if="isLoading" class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center">
       <svg class="h-12 w-12 text-orange-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path class="opacity-75" fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
       </svg>
     </div>
 
-    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
+    <!-- 🔔 WELCOME POPUP -->
+    <div v-if="showWelcome" class="fixed inset-0 z-50 bg-black/50 flex justify-center items-center">
+      <div class="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+        <h2 class="text-2xl font-bold text-center mb-4">Selamat Datang!</h2>
+        <p class="text-center mb-6">Selamat datang di aplikasi BNI! Semoga Anda menikmati pengalaman Anda.</p>
+        <button @click="closeWelcomePopup" class="w-full py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600">
+          Tutup
+        </button>
+      </div>
+    </div>
 
+    <!-- Main Login Form -->
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down hover:shadow-lg hover:scale-[1.02] transition-all duration-300 ease-in-out">
       <div class="flex justify-center mb-6">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
@@ -101,7 +105,7 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
@@ -114,75 +118,89 @@ export default {
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
-
     const username = ref('');
     const password = ref('');
     const isLoading = ref(false);
     const errorMessage = ref('');
+    const showWelcome = ref(false);
 
-   const handleLogin = async () => {
-    errorMessage.value = '';
-    isLoading.value = true;
-
-    if (!username.value) {
-      errorMessage.value = 'Username required.'; 
-      isLoading.value = false;
-      return;
-    }
-    const usernamePattern = /^[a-zA-Z0-9]+$/;
-    if (!usernamePattern.test(username.value)) {
-      errorMessage.value = 'Incorrect username or password.'; 
-      isLoading.value = false;
-      return;
-    }
-
-    if (!password.value) {
-      errorMessage.value = 'Password required.'; 
-      isLoading.value = false;
-      return;
-    }
-    if (password.value.length < 8) {
-      errorMessage.value = 'Incorrect username or password.'; 
-      isLoading.value = false;
-      return;
-    }
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':"\\|,.<>/?~`]).{8,}$/;
-    if (!passwordPattern.test(password.value)) {
-      errorMessage.value = 'Incorrect username or password.'; 
-      isLoading.value = false;
-      return;
-    }
-
-    try {
-      const result = await authStore.login({
-        username: username.value,
-        password: password.value
-      });
-
-      if (result.success) {
-        if (result.mfaRequired) {
-          router.push({ name: 'OTP' });
-        } else if (authStore.isAuthenticated) {
-          router.push('/dashboard');
-        }
-      } else {
-        errorMessage.value = 'Incorrect username or password.';
+    // Cek apakah pengunjung pertama kali
+    onMounted(() => {
+      if (!localStorage.getItem('hasVisited')) {
+        showWelcome.value = true;
+        localStorage.setItem('hasVisited', 'true');
       }
-    } catch (error) {
-      console.error('Login process error:', error);
-      errorMessage.value = 'Failed to connect to the server. Please try again.';
-    } finally {
-      isLoading.value = false;
-    }
-  };
+    });
 
+    // Menutup pop-up selamat datang
+    const closeWelcomePopup = () => {
+      showWelcome.value = false;
+    };
+
+    const handleLogin = async () => {
+      errorMessage.value = '';
+      isLoading.value = true;
+
+      if (!username.value) {
+        errorMessage.value = 'Username required.';
+        isLoading.value = false;
+        return;
+      }
+      const usernamePattern = /^[a-zA-Z0-9]+$/;
+      if (!usernamePattern.test(username.value)) {
+        errorMessage.value = 'Incorrect username or password.';
+        isLoading.value = false;
+        return;
+      }
+
+      if (!password.value) {
+        errorMessage.value = 'Password required.';
+        isLoading.value = false;
+        return;
+      }
+      if (password.value.length < 8) {
+        errorMessage.value = 'Incorrect username or password.';
+        isLoading.value = false;
+        return;
+      }
+      const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+[\]{};':"\\|,.<>/?~`]).{8,}$/;
+      if (!passwordPattern.test(password.value)) {
+        errorMessage.value = 'Incorrect username or password.';
+        isLoading.value = false;
+        return;
+      }
+
+      try {
+        const result = await authStore.login({
+          username: username.value,
+          password: password.value
+        });
+
+        if (result.success) {
+          if (result.mfaRequired) {
+            router.push({ name: 'OTP' });
+          } else if (authStore.isAuthenticated) {
+            router.push('/dashboard');
+          }
+        } else {
+          errorMessage.value = 'Incorrect username or password.';
+        }
+      } catch (error) {
+        console.error('Login process error:', error);
+        errorMessage.value = 'Failed to connect to the server. Please try again.';
+      } finally {
+        isLoading.value = false;
+      }
+    };
 
     return {
       username,
       password,
       isLoading,
       errorMessage,
-      handleLogin
+      showWelcome,
+      handleLogin,
+      closeWelcomePopup
     };
   }
 };
@@ -199,6 +217,7 @@ export default {
     transform: translateY(0);
   }
 }
+
 .animate-fade-in-down {
   animation: fade-in-down 0.5s ease-out forwards;
 }

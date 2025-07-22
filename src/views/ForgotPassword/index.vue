@@ -55,50 +55,35 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth'; // Pinia store untuk autentikasi
+import { useAuthStore } from '@/stores/auth';
 
 export default {
   name: 'ForgotPasswordPage',
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore(); // Dapatkan instance Pinia store
+    const authStore = useAuthStore();
 
     const emailOrUsername = ref('');
-    // isLoading dan errorMessage sekarang akan diambil langsung dari authStore
-    // const isLoading = ref(false); // Dihapus, karena state ini dikelola di store
-    // const errorMessage = ref(''); // Dihapus, karena state ini dikelola di store
 
     const handleResetPassword = async () => {
-      // Tidak perlu mengatur isLoading.value = true atau false di sini.
-      // Store yang akan mengelola state loading dan error.
-      // errorMessage.value = ''; // Tidak perlu mereset error secara manual di sini jika store yang mengelola
-
       try {
-        // Panggil aksi resetPassword dari store
         const result = await authStore.resetPassword({ emailOrUsername: emailOrUsername.value });
 
         if (result.success) {
-          router.push('/login'); // Redirect setelah sukses
-        } else {
-          // Jika store mengembalikan pesan error secara eksplisit:
-          if (result.message) {
-             authStore.error.value = result.message; // Store the specific error message
-          }
-          // Jika store tidak mengembalikan pesan spesifik, store.error.value sudah diatur oleh store
-          // Atau, Anda bisa menetapkan pesan default di sini jika store tidak mengaturnya:
-          // if (!authStore.error.value) { authStore.error.value = 'Failed to reset password.'; }
+          router.push('/login');
+        } else if (result.message) {
+          authStore.error.value = result.message;
         }
       } catch (error) {
-        // Tangani kesalahan tak terduga (misalnya, masalah jaringan)
+        // --- PERBAIKAN UNTUK SONARQUBE: LOG ERROR ---
+        console.error('Error during password reset:', error);
         authStore.error.value = 'Terjadi kesalahan, coba lagi.';
       }
-      // Tidak ada finally block lagi di sini karena store yang mengelola isLoading
     };
 
     return {
-      // Data yang akan tersedia di template
       emailOrUsername,
-      authStore, // Ekspos seluruh authStore agar bisa diakses di template (e.g., authStore.isLoading.value)
+      authStore,
       handleResetPassword
     };
   }

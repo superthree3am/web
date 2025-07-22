@@ -16,9 +16,9 @@ export default {
   name: 'ApiDataComponent',
   data() {
     return {
-      data: null, 
-      isLoading: false, 
-      errorMessage: '', 
+      data: null,
+      isLoading: false,
+      errorMessage: '',
     };
   },
   created() {
@@ -26,19 +26,35 @@ export default {
   },
   methods: {
     async fetchData() {
-      this.isLoading = true; 
-      this.errorMessage = ''; 
+      this.isLoading = true;
+      this.errorMessage = '';
       try {
-        
         const apiUrl = process.env.VUE_APP_SERVICE_API;
-        
-        const response = await axios.get(`${apiUrl}/v1/register`); 
-        
-        this.data = response.data; 
+
+        // Pastikan apiUrl tidak undefined sebelum melakukan request
+        if (!apiUrl) {
+          this.errorMessage = 'API URL is not defined in environment variables.';
+          console.error('API URL (VUE_APP_SERVICE_API) is not defined.');
+          this.isLoading = false;
+          return; // Hentikan eksekusi jika apiUrl tidak ada
+        }
+
+        const response = await axios.get(`${apiUrl}/v1/register`);
+
+        this.data = response.data;
       } catch (error) {
-        this.errorMessage = 'An error occurred while fetching data from the API'; 
+        // --- PERBAIKAN UNTUK SONARQUBE: LOG ERROR ---
+        console.error('Error fetching data from API:', error);
+        // Anda bisa memberikan pesan error yang lebih spesifik jika 'error.response' ada
+        if (error.response) {
+          this.errorMessage = `Error: ${error.response.status} - ${error.response.data.message || 'Server error'}`;
+        } else if (error.request) {
+          this.errorMessage = 'Network error: No response received from server.';
+        } else {
+          this.errorMessage = 'An unexpected error occurred while fetching data from the API.';
+        }
       } finally {
-        this.isLoading = false; 
+        this.isLoading = false;
       }
     },
   },

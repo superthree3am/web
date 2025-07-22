@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'; 
+import { ref, computed } from 'vue';
 
 export default {
   name: 'BaseInput',
@@ -47,7 +47,7 @@ export default {
       type: String,
       default: '',
     },
-    type: { 
+    type: {
       type: String,
       default: 'text',
     },
@@ -83,14 +83,13 @@ export default {
       type: String,
       default: '',
     },
-    isPasswordToggle: { 
+    isPasswordToggle: {
       type: Boolean,
       default: false,
     },
   },
   emits: ['update:modelValue'],
   setup(props) {
-  
     const inputType = ref(props.type);
 
     const computedInputType = computed(() => {
@@ -109,7 +108,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-
-</style>
