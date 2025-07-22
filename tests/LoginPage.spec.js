@@ -49,24 +49,30 @@ describe('LoginPage', () => {
   })
 
   // 2. FORM VALIDATION TESTS
-  it.skip('validates empty fields', async () => {  // Skip this test
-    await wrapper.find('form').trigger('submit')
-    expect(wrapper.text()).toContain('Username and password are required')
+ it('validates empty fields', async () => {
+  wrapper.vm.username = ''
+  wrapper.vm.password = ''
+  await wrapper.find('form').trigger('submit.prevent')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.text()).toContain('Username required.')
   })
 
-  it.skip('validates username format', async () => { // Skip this test
-    await wrapper.find('#username').setValue('user@test')
-    await wrapper.find('#password').setValue('password123')
-    await wrapper.find('form').trigger('submit')
-    expect(wrapper.text()).toContain('Username can only contain letters and numbers')
-  })
 
-  it.skip('validates password length', async () => { // Skip this test
-    await wrapper.find('#username').setValue('testuser')
-    await wrapper.find('#password').setValue('123')
-    await wrapper.find('form').trigger('submit')
-    expect(wrapper.text()).toContain('Password must be at least 8 characters long')
-  })
+  it('validates username format', async () => {
+  await wrapper.find('#username').setValue('user@test')
+  await wrapper.find('#password').setValue('password123')
+  await wrapper.find('form').trigger('submit.prevent')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.text()).toContain('Incorrect username or password.')
+})
+
+it('validates password length', async () => {
+  await wrapper.find('#username').setValue('testuser')
+  await wrapper.find('#password').setValue('123')
+  await wrapper.find('form').trigger('submit.prevent')
+  await wrapper.vm.$nextTick()
+  expect(wrapper.text()).toContain('Incorrect username or password.')
+})
 
   // 3. SUCCESSFUL LOGIN TESTS
   it('handles successful login without MFA', async () => {
@@ -81,36 +87,40 @@ describe('LoginPage', () => {
     // Assertions here
   })
 
-  it.skip('handles successful login with MFA', async () => { // Skip this test
-    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: true })
+it('handles successful login with MFA', async () => {
+  mockAuthStore.login = vi.fn().mockResolvedValue({ success: true, mfaRequired: true })
 
-    await wrapper.find('#username').setValue('testuser')
-    await wrapper.find('#password').setValue('password123')
-    await wrapper.find('form').trigger('submit')
-    await wrapper.vm.$nextTick()
+  await wrapper.find('#username').setValue('testuser')
+  await wrapper.find('#password').setValue('Password123!')
+  await wrapper.find('form').trigger('submit')
+  await wrapper.vm.$nextTick()
 
-    expect(router.push).toHaveBeenCalled()
-  })
+  expect(router.push).toHaveBeenCalledWith({ name: 'OTP' })
+})
 
   // 4. ERROR HANDLING TESTS
-  it.skip('clears previous errors on new submission', async () => { // Skip this test
-    // First submission with error
-    await wrapper.find('form').trigger('submit')
-    expect(wrapper.text()).toContain('Username and password are required')
+  it('clears previous errors on new submission', async () => {
+  // First submission with empty inputs
+  await wrapper.find('#username').setValue('')
+  await wrapper.find('#password').setValue('')
+  await wrapper.find('form').trigger('submit')
+  await wrapper.vm.$nextTick()
 
-    // Second submission should clear error
-    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: false })
-    await wrapper.find('#username').setValue('testuser')
-    await wrapper.find('#password').setValue('password123')
-    await wrapper.find('form').trigger('submit')
-    await wrapper.vm.$nextTick()
+  expect(wrapper.text()).toContain('Username required.')
 
-    expect(wrapper.text()).not.toContain('Username and password are required')
-  })
+  // Second submission with valid inputs
+  mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: false })
+  await wrapper.find('#username').setValue('testuser')
+  await wrapper.find('#password').setValue('Password123!')
+  await wrapper.find('form').trigger('submit')
+  await wrapper.vm.$nextTick()
 
-  // 5. LOADING STATE TESTS
+  expect(wrapper.text()).not.toContain('Username required.')
+  expect(wrapper.text()).not.toContain('Password required.')
+})
 
-  // 6. INPUT INTERACTION TESTS
+
+  // 5. INPUT INTERACTION TESTS
   it('updates form data when typing', async () => {
     await wrapper.find('#username').setValue('newuser')
     await wrapper.find('#password').setValue('newpass123')
