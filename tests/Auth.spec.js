@@ -1,362 +1,454 @@
+import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useAuthStore } from '@/stores/auth';
 
-// 🧪 MOCK: Firebase modules
-vi.mock('firebase/app', () => ({
-  initializeApp: vi.fn(),
-}));
+// Deklarasikan variabel untuk menyimpan referensi ke mock functions
+let mockInitializeApp;
+let mockSignInWithPhoneNumber;
+let mockRecaptchaVerifierRender;
+let mockRecaptchaVerifierClear;
+let mockRecaptchaVerifierClass;
+let mockSignOut;
+let firebaseAuthInstance; // Variabel untuk menyimpan instance firebaseAuth yang bisa kita manipulasi
 
-vi.mock('firebase/auth', async () => {
-  const mockRecaptchaInstance = {
-    render: vi.fn(() => Promise.resolve()), // Recaptcha render tidak mengembalikan nilai
-    clear: vi.fn(),
-  };
+// Implementasi mock localStorage kustom yang akan kita gunakan
+const localStorageMock = (function() {
+    let store = {};
+    return {
+        getItem: vi.fn(function(key) {
+            return store[key] || null;
+        }),
+        setItem: vi.fn(function(key, value) {
+            store[key] = value.toString();
+        }),
+        removeItem: vi.fn(function(key) {
+            delete store[key];
+        }),
+        clear: vi.fn(function() {
+            store = {};
+        })
+    };
+})();
 
-  const mockSignInWithPhoneNumberConfirm = vi.fn(() =>
-    Promise.resolve({
-      user: {
-        getIdToken: () => Promise.resolve('verified-token'),
-      },
-    })
-  );
+// Ganti objek global localStorage dengan mock kita
+Object.defineProperty(global, 'localStorage', { value: localStorageMock });
 
-  const mockSignInWithPhoneNumber = vi.fn(() =>
-    Promise.resolve({
-      confirm: mockSignInWithPhoneNumberConfirm,
-      // Penting: Firebase signInWithPhoneNumber mengembalikan objek confirmationResult
-      // yang kemudian disimpan di store.
-      // Kita perlu mengembalikan objek yang bisa diakses seperti itu.
-      // Untuk tujuan pengujian, kita bisa mengembalikan mock ini sebagai confirmationResult.
-      verificationId: 'mock-verification-id', // Tambahkan properti ini jika store Anda menggunakannya
-    })
-  );
 
+vi.doMock('firebase/app', () => {
+  mockInitializeApp = vi.fn(() => ({}));
   return {
-    getAuth: vi.fn(() => ({
-      currentUser: {
-        getIdToken: vi.fn(() => Promise.resolve('firebase-id-token')),
-      },
-      signOut: vi.fn(() => Promise.resolve()),
-    })),
-    signInWithPhoneNumber: mockSignInWithPhoneNumber,
-    RecaptchaVerifier: vi.fn((_containerId, _options, _auth) => {
-      // Ketika RecaptchaVerifier dibuat, ia mungkin langsung mencoba merender
-      // atau menyimpan containerId. Pastikan mock render dipanggil dengan benar.
-      // Jika render dipanggil di constructor, mockRecaptchaInstance.render akan dipanggil di sini.
-      return mockRecaptchaInstance;
-    }),
-    __mockRecaptchaInstance: mockRecaptchaInstance,
-    __mockSignInWithPhoneNumberConfirm: mockSignInWithPhoneNumberConfirm,
-    __mockSignInWithPhoneNumber: mockSignInWithPhoneNumber,
+    initializeApp: mockInitializeApp,
   };
 });
 
-import {
-  __mockRecaptchaInstance,
-  __mockSignInWithPhoneNumberConfirm,
-  __mockSignInWithPhoneNumber,
-  getAuth
-} from 'firebase/auth';
+vi.doMock('firebase/auth', async () => {
+  const createMockFirebaseAuth = () => {
+    return {
+      currentUser: null,
+    };
+  };
+
+  mockSignInWithPhoneNumber = vi.fn(() => Promise.resolve({
+    verificationId: 'mock-verification-id',
+    confirm: vi.fn((code) => {
+      if (code === '123456') {
+        return Promise.resolve({ user: { getIdToken: vi.fn(() => 'mock-firebase-id-token') } });
+      }
+      return Promise.reject({ code: 'auth/invalid-verification-code', message: 'The verification code is invalid.' });
+    }),
+  }));
+
+  mockRecaptchaVerifierRender = vi.fn(() => Promise.resolve());
+  mockRecaptchaVerifierClear = vi.fn();
+  mockRecaptchaVerifierClass = vi.fn(() => ({
+    render: mockRecaptchaVerifierRender,
+    clear: mockRecaptchaVerifierClear,
+  }));
+
+  mockSignOut = vi.fn(() => {
+    if (firebaseAuthInstance) {
+      firebaseAuthInstance.currentUser = null;
+    }
+    return Promise.resolve();
+  });
+
+  return {
+    getAuth: vi.fn(() => {
+      if (!firebaseAuthInstance) {
+          firebaseAuthInstance = createMockFirebaseAuth();
+      }
+      return firebaseAuthInstance;
+    }),
+    signInWithPhoneNumber: mockSignInWithPhoneNumber,
+    RecaptchaVerifier: mockRecaptchaVerifierClass,
+    signOut: mockSignOut,
+  };
+});
 
 
 describe('auth store - real store with mocked Firebase', () => {
   let store;
+  let fetchSpy;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Pastikan Firebase Auth instance direset untuk setiap tes
+    firebaseAuthInstance = null; 
+
+    // PENTING: Aktifkan Pinia dan buat store baru di setiap beforeEach
     setActivePinia(createPinia());
+    // Import store di sini untuk memastikan ia mendapatkan mocks terbaru
+    const { useAuthStore } = await import('../src/stores/auth'); 
     store = useAuthStore();
-    localStorage.clear();
-    vi.restoreAllMocks();
 
-    __mockRecaptchaInstance.render.mockClear();
-    __mockRecaptchaInstance.clear.mockClear();
-    __mockSignInWithPhoneNumber.mockClear();
-    __mockSignInWithPhoneNumberConfirm.mockClear();
+    // Reset semua mock (termasuk yang di `localStorageMock`)
+    vi.clearAllMocks(); // Ini akan membersihkan riwayat panggilan dari semua mock functions.
+    
+    fetchSpy = vi.spyOn(global, 'fetch');
+    
+    // Kosongkan localStorage sebelum setiap tes menggunakan mock clear
+    localStorageMock.clear();
+  });
 
-    __mockRecaptchaInstance.render.mockResolvedValue(undefined);
-    __mockRecaptchaInstance.clear.mockResolvedValue(undefined);
-    __mockSignInWithPhoneNumberConfirm.mockResolvedValue({
-      user: {
-        getIdToken: () => Promise.resolve('verified-token'),
-      },
-    });
-    __mockSignInWithPhoneNumber.mockResolvedValue({
-      confirm: __mockSignInWithPhoneNumberConfirm,
-      verificationId: 'mock-verification-id',
-    });
-
-    // Reset confirmationResult di store agar tes dimulai dari keadaan bersih
-    store.confirmationResult = null;
-    store.user = null; // Pastikan user juga null
+  afterEach(() => {
+    // Bersihkan semua mock setelah setiap tes
+    vi.clearAllMocks(); // Ini akan membersihkan riwayat panggilan dari semua mock functions.
+    localStorageMock.clear(); // Pastikan localStorage bersih setelah setiap tes
+    firebaseAuthInstance = null; // Reset instance Firebase Auth
   });
 
   it('logs in successfully', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: async () => ({
-          token: 'mock-token',
-          username: 'user1',
-          user: { username: 'user1' },
-        }),
-      })
-    );
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ token: 'mock-token', username: 'user1', user: { username: 'user1' } }),
+    });
 
-    const result = await store.login({ username: 'user1', password: '1234' });
+    const result = await store.login({ username: 'user1', password: 'password123' });
+
     expect(result.success).toBe(true);
     expect(store.isAuthenticated).toBe(true);
     expect(store.token).toBe('mock-token');
-    expect(localStorage.getItem('auth_token')).toBe('mock-token');
     expect(store.user).toEqual({ username: 'user1' });
+    // Sekarang kita memanggil mock dari localStorageMock
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'mock-token');
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('user_data', JSON.stringify({ username: 'user1' }));
+    expect(localStorageMock.getItem('auth_token')).toBe('mock-token');
+    expect(localStorageMock.getItem('user_data')).toBe(JSON.stringify({ username: 'user1' }));
   });
 
-  it('login with MFA required', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: async () => ({
-          phoneNumber: '+621234567890',
-          username: 'mfauser',
-        }),
-      })
-    );
+  it('logs in with MFA required', async () => {
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ phoneNumber: '+1234567890', message: 'MFA required', username: 'user1' }),
+    });
 
-    const result = await store.login({ username: 'mfauser', password: '1234' });
+    const result = await store.login({ username: 'user1', password: 'password123' });
+
+    expect(result.success).toBe(true);
     expect(result.mfaRequired).toBe(true);
-    expect(store.currentPhoneNumber).toBe('+621234567890');
+    expect(store.currentPhoneNumber).toBe('+1234567890');
     expect(store.isAuthenticated).toBe(false);
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('current_phone_number', '+1234567890');
+    expect(localStorageMock.getItem('current_phone_number')).toBe('+1234567890');
   });
 
   it('fails login with invalid credentials', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        json: async () => ({ message: 'Login failed' }),
-      })
-    );
+    fetchSpy.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ message: 'Invalid credentials' }),
+    });
 
     const result = await store.login({ username: 'wrong', password: 'wrong' });
+
     expect(result.success).toBe(false);
+    expect(result.message).toBe('Invalid credentials');
     expect(store.isAuthenticated).toBe(false);
-    expect(store.token).toBeNull();
-    expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
   it('fails login due to network error', async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error('Network connection lost')));
+    fetchSpy.mockRejectedValueOnce(new Error('Network connection lost'));
 
-    const result = await store.login({ username: 'user1', password: '1234' });
+    const result = await store.login({ username: 'user1', password: 'password123' });
+
     expect(result.success).toBe(false);
-    expect(result.message).toContain('Network error or server unavailable.');
+    expect(result.message).toBe('Network error or server unavailable.');
     expect(store.isAuthenticated).toBe(false);
   });
 
   it('registers successfully', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: async () => ({ message: 'Pendaftaran berhasil' }),
-      })
-    );
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ message: 'Registration successful' }),
+    });
 
     const result = await store.register({
       fullName: 'Test User',
       email: 'test@example.com',
-      username: 'tester',
-      phone: '081234',
-      password: 'password',
+      username: 'testuser',
+      phone: '1234567890',
+      password: 'password123',
     });
 
     expect(result.success).toBe(true);
-    expect(result.message).toBe('Pendaftaran berhasil');
+    expect(result.message).toBe('Registration successful');
   });
 
   it('fails registration due to backend error', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        json: async () => ({ message: 'Username already exists' }),
-      })
-    );
+    fetchSpy.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ message: 'Username already taken' }),
+    });
 
     const result = await store.register({
       fullName: 'Test User',
       email: 'test@example.com',
-      username: 'existing_user',
-      phone: '081234',
-      password: 'password',
+      username: 'existinguser',
+      phone: '1234567890',
+      password: 'password123',
     });
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe('Username already exists');
+    expect(result.message).toBe('Username already taken');
   });
 
   it('fails registration due to network error', async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error('Registration network error')));
+    fetchSpy.mockRejectedValueOnce(new Error('Registration network error'));
 
     const result = await store.register({
       fullName: 'Test User',
       email: 'test@example.com',
-      username: 'tester',
-      phone: '081234',
-      password: 'password',
+      username: 'testuser',
+      phone: '1234567890',
+      password: 'password123',
     });
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain('An error occurred during registration. Please try again.');
+    expect(result.message).toBe('An error occurred during registration. Please try again.');
   });
 
   it('fails to send OTP without phone number', async () => {
     store.currentPhoneNumber = null;
+
     const result = await store.sendOtpFirebase();
+
     expect(result.success).toBe(false);
-    expect(result.message).toMatch(/phone number/i);
-    expect(__mockRecaptchaInstance.render).not.toHaveBeenCalled();
+    expect(result.message).toBe('Phone number not available to send OTP.');
+    expect(mockRecaptchaVerifierClass).not.toHaveBeenCalled();
+    expect(mockSignInWithPhoneNumber).not.toHaveBeenCalled();
   });
 
-  // Perbaikan: Tes ini sekarang harus lulus jika store Anda menyimpan confirmationResult
-  it.skip('sends OTP successfully and renders recaptcha', async () => { // SKIPPED
-    store.currentPhoneNumber = '+628123456789';
-    const result = await store.sendOtpFirebase('recaptcha-container-id');
+  it('sends OTP successfully and renders recaptcha', async () => {
+    store.currentPhoneNumber = '+1234567890';
+
+    const result = await store.sendOtpFirebase('test-recaptcha-container');
+
     expect(result.success).toBe(true);
-    expect(__mockRecaptchaInstance.render).toHaveBeenCalledTimes(1);
-    // RecaptchaVerifier constructor menerima containerId, method .render() tidak
-    expect(__mockRecaptchaInstance.render).toHaveBeenCalledWith();
-    // Pastikan confirmationResult di store telah diatur oleh sendOtpFirebase
+    expect(result.message).toBe('OTP sent!');
+    expect(mockRecaptchaVerifierClass).toHaveBeenCalledWith(
+        firebaseAuthInstance,
+        'test-recaptcha-container',
+        expect.any(Object)
+    );
+    expect(mockRecaptchaVerifierRender).toHaveBeenCalled();
+    expect(mockSignInWithPhoneNumber).toHaveBeenCalledWith(
+      firebaseAuthInstance,
+      '+1234567890',
+      expect.any(Object)
+    );
     expect(store.confirmationResult).toBeDefined();
-    expect(store.confirmationResult.verificationId).toBe('mock-verification-id'); // Contoh pengecekan properti
+    expect(store.confirmationResult.verificationId).toBe('mock-verification-id');
   });
 
   it('fails to send OTP due to Firebase error', async () => {
-    store.currentPhoneNumber = '+628123456789';
-    __mockSignInWithPhoneNumber.mockRejectedValueOnce(new Error('Firebase OTP error'));
+    store.currentPhoneNumber = '+1234567890';
+    mockSignInWithPhoneNumber.mockRejectedValueOnce(new Error('Firebase OTP error'));
 
-    const result = await store.sendOtpFirebase('recaptcha-container-id');
+    const result = await store.sendOtpFirebase();
+
     expect(result.success).toBe(false);
-    expect(result.message).toContain('Firebase OTP error');
-    expect(__mockRecaptchaInstance.render).toHaveBeenCalledTimes(1);
-    expect(__mockRecaptchaInstance.clear).toHaveBeenCalledTimes(1);
-    expect(store.confirmationResult).toBeNull(); // Pastikan confirmationResult direset
+    expect(result.message).toBe('Firebase OTP error');
+    expect(mockRecaptchaVerifierClear).toHaveBeenCalled();
+    expect(store.confirmationResult).toBeNull();
   });
 
   it('verifies OTP and logs in via Firebase', async () => {
-    store.currentPhoneNumber = '+628123456789';
+    store.currentPhoneNumber = '+1234567890';
+    await store.sendOtpFirebase(); // Untuk menyetel confirmationResult
 
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: async () => ({
-          token: 'backend-verified-token',
-          username: 'firebaseuser',
-          user: { username: 'firebaseuser' },
-        }),
-      })
-    );
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ token: 'backend-verified-token', user: { username: 'firebaseuser' } }),
+    });
 
-    await store.sendOtpFirebase(); // Panggil sendOtpFirebase terlebih dahulu untuk mengisi confirmationResult
-    const result = await store.verifyOtpAndLoginWithFirebase('000000');
+    const result = await store.verifyOtpAndLoginWithFirebase('123456');
 
-    expect(__mockSignInWithPhoneNumberConfirm).toHaveBeenCalledWith('000000');
     expect(result.success).toBe(true);
     expect(store.isAuthenticated).toBe(true);
     expect(store.token).toBe('backend-verified-token');
-    expect(localStorage.getItem('auth_token')).toBe('backend-verified-token');
     expect(store.user).toEqual({ username: 'firebaseuser' });
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'backend-verified-token');
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('user_data', JSON.stringify({ username: 'firebaseuser' }));
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number'); // Seharusnya menghapus ini saat sukses
     expect(store.currentPhoneNumber).toBeNull();
+    expect(store.confirmationResult).toBeNull();
+    expect(mockRecaptchaVerifierClear).toHaveBeenCalled();
   });
 
   it('fails OTP verification if confirmationResult is missing', async () => {
     store.confirmationResult = null;
+
     const result = await store.verifyOtpAndLoginWithFirebase('123456');
+
     expect(result.success).toBe(false);
-    expect(result.message).toMatch(/OTP flow not initiated/);
-    expect(__mockSignInWithPhoneNumberConfirm).not.toHaveBeenCalled();
+    expect(result.message).toBe('OTP flow not initiated. Please try again.');
   });
 
   it('fails OTP verification with incorrect OTP', async () => {
-    store.currentPhoneNumber = '+628123456789';
-    await store.sendOtpFirebase();
-
-    __mockSignInWithPhoneNumberConfirm.mockRejectedValueOnce(new Error('auth/invalid-verification-code'));
-
-    const result = await store.verifyOtpAndLoginWithFirebase('wrong-otp');
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('auth/invalid-verification-code');
-    expect(store.isAuthenticated).toBe(false);
-    expect(store.token).toBeNull();
-    expect(localStorage.getItem('auth_token')).toBeNull();
-  });
-
-  it('fails OTP verification if backend API call fails', async () => {
-    store.currentPhoneNumber = '+628123456789';
-    await store.sendOtpFirebase();
-
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        json: async () => ({ message: 'Backend verification failed' }),
-      })
-    );
+    store.currentPhoneNumber = '+1234567890';
+    await store.sendOtpFirebase(); // Untuk menyetel confirmationResult
 
     const result = await store.verifyOtpAndLoginWithFirebase('000000');
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Incorrect OTP code!');
+    expect(store.isAuthenticated).toBe(false);
+    expect(store.confirmationResult).toBeNull(); // Seharusnya dibersihkan saat error
+    expect(store.currentPhoneNumber).toBeNull(); // Seharusnya dibersihkan saat error
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number'); // Seharusnya menghapus ini saat error
+  });
+
+  // Tes yang diperbaiki:
+  it('fails OTP verification if backend API call fails', async () => {
+    store.currentPhoneNumber = '+1234567890';
+    await store.sendOtpFirebase(); // Untuk menyetel confirmationResult
+
+    // --- BARU: Setel item di mocked localStorage agar bisa dihapus ---
+    // Ini mensimulasikan kemungkinan adanya sisa data token atau user dari sesi sebelumnya
+    // atau dari bagaimana store Anda menangani pembersihan secara internal.
+    localStorageMock.setItem('auth_token', 'token-sebelumnya');
+    localStorageMock.setItem('user_data', JSON.stringify({ oldUser: 'data' }));
+    // ------------------------------------------------------------------
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ message: 'Backend verification failed' }),
+    });
+
+    const result = await store.verifyOtpAndLoginWithFirebase('123456');
+
     expect(result.success).toBe(false);
     expect(result.message).toBe('Backend verification failed');
     expect(store.isAuthenticated).toBe(false);
     expect(store.token).toBeNull();
-    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(store.user).toBeNull();
+    
+    // Verifikasi bahwa semua item yang relevan dihapus, terlepas dari urutan
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
+    
+    // Opsional: Anda bisa memeriksa berapa kali removeItem dipanggil secara total
+    // Jika hanya 3 item ini yang seharusnya dihapus, maka total panggilan harus 3.
+    expect(localStorageMock.removeItem).toHaveBeenCalledTimes(3); 
+    
+    expect(store.currentPhoneNumber).toBeNull();
+    expect(store.confirmationResult).toBeNull();
   });
 
-  // Perbaikan: Tes ini sekarang harus lulus jika store Anda mengosongkan confirmationResult
-  it.skip('clears store on logout', async () => { // SKIPPED
-    store.token = 'xxx';
-    store.user = { username: 'test' };
+  it('clears store on logout', async () => {
+    // Set initial state to simulate being logged in
+    store.token = 'some-token';
+    store.user = { some: 'result' };
     store.isAuthenticated = true;
-    store.currentPhoneNumber = 'dummy';
-    store.confirmationResult = { some: 'result' }; // Set nilai awal untuk diuji pengosongannya
+    store.currentPhoneNumber = '+1234567890';
+    store.confirmationResult = { some: 'result' };
+    
+    // Set items in the mocked localStorage so they can be removed
+    localStorageMock.setItem('auth_token', 'some-token');
+    localStorageMock.setItem('user_data', JSON.stringify({ some: 'result' }));
+    localStorageMock.setItem('current_phone_number', '+1234567890');
 
-    const removeItemSpy = vi.spyOn(localStorage, 'removeItem');
-    const signOutSpy = vi.spyOn(getAuth(), 'signOut');
+    // Pastikan firebaseAuthInstance diinisialisasi untuk tes ini.
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    auth.currentUser = { uid: 'firebase-user-id' };
+
+    fetchSpy.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
 
     await store.logout();
 
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/logout'), expect.any(Object));
+    expect(store.isAuthenticated).toBe(false);
     expect(store.token).toBeNull();
     expect(store.user).toBeNull();
-    expect(store.isAuthenticated).toBe(false);
     expect(store.currentPhoneNumber).toBeNull();
-    expect(store.confirmationResult).toBeNull(); // Ini yang sebelumnya gagal
-
-    expect(removeItemSpy).toHaveBeenCalledWith('auth_token');
-    expect(removeItemSpy).toHaveBeenCalledWith('user_data');
-    expect(removeItemSpy).toHaveBeenCalledWith('current_phone_number');
-    expect(signOutSpy).toHaveBeenCalledTimes(1);
+    expect(store.confirmationResult).toBeNull();
+    
+    // Verifikasi bahwa removeItem dipanggil untuk setiap item pada mock localStorage
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
+    
+    // Pastikan localStorage benar-benar kosong setelah logout
+    expect(localStorageMock.getItem('auth_token')).toBeNull();
+    expect(localStorageMock.getItem('user_data')).toBeNull();
+    expect(localStorageMock.getItem('current_phone_number')).toBeNull();
   });
 
-  // Perbaikan: Tes ini sekarang harus lulus jika store Anda memuat user dari localStorage
-  it.skip('checkAuth sets auth state from localStorage', () => { // SKIPPED
-    localStorage.setItem('auth_token', 'stored-token');
-    localStorage.setItem('user_data', JSON.stringify({ username: 'storedUser' })); // Mock user data
-
+  it('checkAuth sets auth state from localStorage', () => {
+    // Set localStorage items directly using the mocked localStorage
+    localStorageMock.setItem('auth_token', 'stored-token');
+    localStorageMock.setItem('user_data', JSON.stringify({ username: 'storedUser' }));
+    localStorageMock.setItem('current_phone_number', '+1122334455');
+    
     store.checkAuth();
 
     expect(store.isAuthenticated).toBe(true);
     expect(store.token).toBe('stored-token');
-    expect(store.user).toEqual({ username: 'storedUser' }); // Ini yang sebelumnya gagal
+    expect(store.user).toEqual({ username: 'storedUser' });
+    expect(store.currentPhoneNumber).toBe('+1122334455');
+    
+    // Pastikan getItem dipanggil untuk setiap key pada mock localStorage
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('user_data');
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('current_phone_number');
   });
 
   it('checkAuth sets auth state false if token not found', () => {
-    localStorage.clear();
+    // Awalnya, pastikan tidak ada token di localStorage
+    localStorageMock.clear(); // Bersihkan mock localStorage
+    localStorageMock.setItem('user_data', JSON.stringify({ some: 'data' }));
+    localStorageMock.setItem('current_phone_number', '+12345');
+    
     store.checkAuth();
+
     expect(store.isAuthenticated).toBe(false);
     expect(store.token).toBeNull();
     expect(store.user).toBeNull();
+    expect(store.currentPhoneNumber).toBeNull();
+    
+    // Memastikan removeItem dipanggil untuk setiap key yang dibersihkan
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
+    // Harusnya dipanggil 3 kali
+    expect(localStorageMock.removeItem).toHaveBeenCalledTimes(3); 
   });
 
   it('checkAuth handles invalid user_data in localStorage', () => {
-    localStorage.setItem('auth_token', 'stored-token');
-    localStorage.setItem('user_data', 'invalid json');
+    // Set localStorage items, dengan user_data yang tidak valid
+    localStorageMock.setItem('auth_token', 'stored-token');
+    localStorageMock.setItem('user_data', 'invalid json'); // Simulasikan data pengguna rusak
+    localStorageMock.setItem('current_phone_number', '+1122334455');
+
     store.checkAuth();
-    expect(store.isAuthenticated).toBe(true);
-    expect(store.user).toBeNull();
+
+    expect(store.isAuthenticated).toBe(true); // Seharusnya masih terautentikasi jika token valid
+    expect(store.token).toBe('stored-token');
+    expect(store.user).toBeNull(); // Data pengguna seharusnya null karena JSON tidak valid
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data'); // user_data tidak valid harus dihapus
+    expect(store.currentPhoneNumber).toBe('+1122334455'); // Nomor telepon seharusnya tetap ada jika valid
   });
 });

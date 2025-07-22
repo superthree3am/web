@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Navigation Bar -->
     <nav class="bg-orange-200 shadow-sm p-4 flex justify-between items-center">
       <div class="flex items-center space-x-4">
         <img class="h-24 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
@@ -9,22 +8,19 @@
         <a href="#" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors duration-200 ease-in-out">Beranda</a>
         <a href="#" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors duration-200 ease-in-out">Transaksi</a>
         <a href="#" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors duration-200 ease-in-out">Profil</a>
-        <button @click="handleLogout" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+        <button @click="handleLogout" data-test="logout-button" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
           Logout
         </button>
       </div>
     </nav>
 
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <!-- Header Selamat Datang -->
       <h1 class="text-3xl font-bold text-gray-900 mb-6 animate-fade-in-up">Selamat Datang, {{ authStore.user ? authStore.user.fullName : 'Pengguna' }}!</h1>
 
-      <!-- Grafik Saldo -->
       <div class="chart-container mb-8">
         <canvas id="balanceChart"></canvas>
       </div>
 
-      <!-- Card Saldo Rekening -->
       <div class="hover-card mb-8 bg-gradient-to-r from-green-400 via-green-500 to-green-600">
         <div class="px-4 py-5 sm:p-6">
           <h3 class="text-lg leading-6 font-medium text-white mb-2">Saldo Rekening Anda</h3>
@@ -61,7 +57,6 @@
           </dl>
         </div>
       </div>
-
 
       <div class="bg-white overflow-hidden shadow-md rounded-lg hover:shadow-lg hover:scale-[1.01] transition-all duration-300 ease-in-out">
         <div class="px-4 py-5 sm:p-6">
@@ -102,8 +97,7 @@
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Chart, LinearScale, CategoryScale, LineElement, PointElement, Title, Tooltip, Legend, LineController } from 'chart.js';
-import { useAuthStore } from '@/stores/auth'; 
-
+import { useAuthStore } from '@/stores/auth';
 
 Chart.register(
   LinearScale,
@@ -120,11 +114,11 @@ export default {
   name: 'DashboardPage',
   setup() {
     const router = useRouter();
-    const authStore = useAuthStore(); 
+    const authStore = useAuthStore();
 
     const handleLogout = () => {
-      authStore.logout(); 
-      router.push('/login'); 
+      authStore.logout();
+      router.push('/login');
     };
 
     onMounted(async () => {
@@ -132,7 +126,7 @@ export default {
 
       if (!authStore.isAuthenticated) {
         router.push('/login');
-        return; 
+        return;
       }
 
       const result = await authStore.getProfile();
@@ -143,7 +137,7 @@ export default {
 
     return {
       handleLogout,
-      authStore 
+      authStore
     };
   }
 };

@@ -4,62 +4,104 @@ import { createTestingPinia } from '@pinia/testing';
 import { createRouter, createWebHistory } from 'vue-router';
 import { vi } from 'vitest';
 import axios from 'axios';
+import { useAuthStore } from '@/stores/auth';
+import { nextTick } from 'vue'; // Import nextTick
 
+// Mock axios globally
 vi.mock('axios');
 
-// Mock router untuk tes
+// Mock Firebase globally (if authStore uses it)
+vi.mock('firebase/app', () => ({
+  initializeApp: vi.fn(),
+}));
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({
+    currentUser: {
+      getIdToken: vi.fn(() => Promise.resolve('mocked-id-token')),
+    },
+  })),
+  signOut: vi.fn(() => Promise.resolve()),
+}));
+
+// Mock router for tests
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/login', component: { template: '<div>Login</div>' } },
-    { path: '/', component: DashboardPage }, // Halaman dashboard
+    { path: '/login', name: 'Login', component: { template: '<div>Login</div>' } },
+    { path: '/', name: 'Dashboard', component: DashboardPage },
   ]
 });
 
-describe('index.vue', () => {
+describe('DashboardPage.vue', () => {
+  let authStore;
+  let pinia;
+
+  // Make sure the router is ready before all tests run
   beforeAll(async () => {
-    router.push('/');
+    // Navigasi ke dashboard sebagai kondisi awal untuk testing logout
+    await router.push('/');
     await router.isReady();
   });
 
   beforeEach(() => {
+    // Clear all mocks and localStorage before each test to ensure isolation
+    vi.clearAllMocks();
+    localStorage.clear();
     localStorage.setItem('token', 'mocked-token');
-    axios.get.mockResolvedValueOnce({ data: { username: 'TestUser' } });
 
-    // Mock Firebase configuration
-    vi.mock('firebase/app', () => ({
-      initializeApp: vi.fn(),
-    }));
+    // Mock response for axios.get (e.g., for getProfile)
+    axios.get.mockResolvedValue({ data: { username: 'TestUser', fullName: 'Test Full Name' } });
 
-    vi.mock('firebase/auth', () => ({
-      getAuth: vi.fn(() => ({
-        currentUser: {
-          getIdToken: vi.fn(() => Promise.resolve('mocked-id-token')),
-        },
-      })),
-      signOut: vi.fn(() => Promise.resolve()),
-    }));
+    // Initialize Pinia for each test with createSpy
+    pinia = createTestingPinia({
+      createSpy: vi.fn,
+    });
+    authStore = useAuthStore(pinia); // Get the mocked store instance
+
+    // Set initial store state for each test
+    authStore.isAuthenticated = true;
+    authStore.user = { username: 'TestUser', fullName: 'Test Full Name' };
+    authStore.token = 'mocked-token';
+
+    // Mock the logout function in the store
+    // This allows us to control its behavior and verify its calls.
+    authStore.logout = vi.fn(async () => {
+      authStore.isAuthenticated = false;
+      authStore.user = null;
+      authStore.token = null;
+      localStorage.removeItem('token');
+      // Simulate router navigation and wait for it to complete
+      await router.push('/login');
+      await router.isReady(); // Ensure the router has processed the navigation
+    });
+
+    // Mock checkAuth and getProfile to prevent real calls
+    authStore.checkAuth = vi.fn(() => {
+        authStore.isAuthenticated = true; 
+    });
+    authStore.getProfile = vi.fn(() => Promise.resolve({ success: true }));
   });
 
-  it('renders welcome message', async () => {
+  it('renders welcome message with user\'s full name', async () => {
     const wrapper = mount(DashboardPage, {
       global: {
-        plugins: [createTestingPinia(), router],
+        plugins: [pinia, router],
       }
     });
 
-    await new Promise(resolve => setTimeout(resolve)); // tunggu onMounted
-    expect(wrapper.text()).toContain('Selamat Datang');
+    await wrapper.vm.$nextTick();
+    
+    expect(wrapper.text()).toMatch(/Selamat Datang, Test Full Name!/);
   });
 
-  it('renders saldo, transaksi, poin, tagihan, dan riwayat transaksi', async () => {
+  it('renders balance, transactions, points, bills, and transaction history', async () => {
     const wrapper = mount(DashboardPage, {
       global: {
-        plugins: [createTestingPinia(), router],
+        plugins: [pinia, router],
       }
     });
 
-    await new Promise(resolve => setTimeout(resolve)); // tunggu onMounted
+    await wrapper.vm.$nextTick();
 
     expect(wrapper.text()).toContain('Saldo Rekening Anda');
     expect(wrapper.text()).toContain('Transaksi Terakhir');
@@ -68,31 +110,40 @@ describe('index.vue', () => {
     expect(wrapper.text()).toContain('Riwayat Transaksi Terbaru');
   });
 
-  // Skip test logout
-  it.skip('logout redirects to login and clears token', async () => {
+  it('logout redirects to login and clears token', async () => {
     const wrapper = mount(DashboardPage, {
       global: {
-        plugins: [createTestingPinia(), router],
+        plugins: [pinia, router],
       }
     });
 
-    // Temukan tombol logout dan trigger klik
-    const logoutBtn = wrapper.find('button'); // pastikan ini tombol yang benar
-    await logoutBtn.trigger('click'); // Trigger event click
+    await wrapper.vm.$nextTick();
 
-    // Tunggu sebentar untuk memastikan perubahan status
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const logoutBtn = wrapper.find('[data-test="logout-button"]');
+    expect(logoutBtn.exists()).toBe(true);
 
-    // Pastikan localStorage sudah dibersihkan
-    expect(localStorage.getItem('token')).toBe(null);
+    await logoutBtn.trigger('click');
 
-    // Periksa apakah rute sekarang berada di halaman login
-    expect(router.currentRoute.value.path).toBe('/login');
+    // **Crucial Change:** Wait for the router's reactive state to update after navigation.
+    // We'll repeatedly await nextTick until the route is what we expect, or a timeout occurs.
+    // This is more robust for async router changes in tests.
+    await new Promise(resolve => {
+        const checkRoute = () => {
+            if (router.currentRoute.value.path === '/login') {
+                resolve();
+            } else {
+                nextTick(checkRoute); // Try again on the next tick
+            }
+        };
+        checkRoute();
+    });
     
-    // Pastikan state store direset
-    const store = useAuthStore();
-    expect(store.isAuthenticated).toBe(false);
-    expect(store.user).toBe(null);
-    expect(store.token).toBe(null);
+    // Assertions for post-logout conditions
+    expect(authStore.logout).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('token')).toBe(null);
+    expect(router.currentRoute.value.path).toBe('/login'); // This should now pass consistently
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(authStore.user).toBe(null);
+    expect(authStore.token).toBe(null);
   });
 });

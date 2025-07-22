@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, signOut } from 'firebase/auth';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null);
@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
 
-  let confirmationResult = null;
+  const confirmationResult = ref(null);
   const currentPhoneNumber = ref(null);
 
   const login = async (credentials) => {
@@ -44,6 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.ok) {
         if (data.phoneNumber) {
           currentPhoneNumber.value = data.phoneNumber;
+          localStorage.setItem('current_phone_number', data.phoneNumber);
           return {
             success: true,
             mfaRequired: true,
@@ -55,6 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
           user.value = data.user || { username: data.username };
           isAuthenticated.value = true;
           localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('user_data', JSON.stringify(user.value));
           return {
             success: true,
             mfaRequired: false,
@@ -87,7 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
       });
       await window.recaptchaVerifier.render();
 
-      confirmationResult = await signInWithPhoneNumber(firebaseAuth, currentPhoneNumber.value, window.recaptchaVerifier);
+      confirmationResult.value = await signInWithPhoneNumber(firebaseAuth, currentPhoneNumber.value, window.recaptchaVerifier);
       return { success: true, message: 'OTP sent!' };
     } catch (error) {
       console.error("Error sending OTP via Firebase:", error);
@@ -112,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
           errorMessage = 'Browser storage not supported. Use a different browser or enable cookies.';
           break;
       }
+      confirmationResult.value = null;
       return { success: false, message: errorMessage };
     } finally {
       isLoading.value = false;
@@ -120,12 +123,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   const verifyOtpAndLoginWithFirebase = async (otpCode) => {
     isLoading.value = true;
-    if (!confirmationResult) {
+    if (!confirmationResult.value) {
       isLoading.value = false;
       return { success: false, message: 'OTP flow not initiated. Please try again.' };
     }
     try {
-      const userCredential = await confirmationResult.confirm(otpCode);
+      const userCredential = await confirmationResult.value.confirm(otpCode);
       const firebaseIdToken = await userCredential.user.getIdToken();
 
       const response = await fetch(`${baseURL}/api/v1/verify`, {
@@ -143,10 +146,19 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = data.user || { username: data.username };
         isAuthenticated.value = true;
         localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(user.value));
         if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
         currentPhoneNumber.value = null;
+        confirmationResult.value = null;
+        localStorage.removeItem('current_phone_number');
         return { success: true, message: data.message || 'Login successful via OTP.' };
       } else {
+        // Clear state on backend verification failure
+        currentPhoneNumber.value = null;
+        confirmationResult.value = null;
+        localStorage.removeItem('current_phone_number');
+        localStorage.removeItem('auth_token'); // Ditambahkan
+        localStorage.removeItem('user_data');   // Ditambahkan
         return { success: false, message: data.message || 'Backend verification failed.' };
       }
     } catch (error) {
@@ -160,6 +172,12 @@ export const useAuthStore = defineStore('auth', () => {
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Too many attempts. Try again later.';
       }
+      // Clear state on Firebase verification error
+      currentPhoneNumber.value = null;
+      confirmationResult.value = null;
+      localStorage.removeItem('current_phone_number');
+      localStorage.removeItem('auth_token'); // Ditambahkan
+      localStorage.removeItem('user_data');   // Ditambahkan
       return { success: false, message: errorMessage };
     } finally {
       isLoading.value = false;
@@ -192,6 +210,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (response.ok) {
         user.value = { ...user.value, ...data };
+        localStorage.setItem('user_data', JSON.stringify(user.value));
         return { success: true, profile: data, message: 'Profile fetched successfully.' };
       } else {
         if (response.status === 401) {
@@ -250,35 +269,65 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-
   const logout = async () => {
     try {
+      if (firebaseAuth.currentUser) {
+        await signOut(firebaseAuth);
+      }
       await fetch(`${baseURL}/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token.value}`,
         },
-        credentials: 'include', // jika backend pakai cookie
+        credentials: 'include',
       });
     } catch (error) {
-      console.error('Logout API error:', error);
+      console.error('Logout error:', error);
     }
 
     user.value = null;
     token.value = null;
     isAuthenticated.value = false;
     currentPhoneNumber.value = null;
+    confirmationResult.value = null;
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('current_phone_number');
   };
 
   const checkAuth = () => {
     const storedToken = localStorage.getItem('auth_token');
+    const storedUserData = localStorage.getItem('user_data');
+    const storedPhoneNumber = localStorage.getItem('current_phone_number');
+
     if (storedToken) {
       token.value = storedToken;
       isAuthenticated.value = true;
+      if (storedUserData) {
+        try {
+          user.value = JSON.parse(storedUserData);
+        } catch (e) {
+          console.error('Failed to parse user data from localStorage', e);
+          user.value = null;
+          localStorage.removeItem('user_data');
+        }
+      } else {
+        user.value = null;
+      }
+      if (storedPhoneNumber) {
+        currentPhoneNumber.value = storedPhoneNumber;
+      } else {
+        currentPhoneNumber.value = null;
+      }
     } else {
       isAuthenticated.value = false;
+      token.value = null;
+      user.value = null;
+      currentPhoneNumber.value = null;
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('current_phone_number');
     }
   };
 
@@ -288,6 +337,7 @@ export const useAuthStore = defineStore('auth', () => {
     currentPhoneNumber,
     isAuthenticated,
     isLoading,
+    confirmationResult,
     login,
     sendOtpFirebase,
     verifyOtpAndLoginWithFirebase,
