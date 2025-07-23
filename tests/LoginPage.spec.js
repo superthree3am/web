@@ -10,7 +10,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { name: 'OTP', path: '/otp' },
-    { path: '/dashboard' }
+    { name: 'Dashboard', path: '/dashboard' }
   ]
 })
 router.push = vi.fn()
@@ -18,7 +18,8 @@ router.push = vi.fn()
 // Mock auth store
 const mockAuthStore = {
   login: vi.fn(),
-  isAuthenticated: false
+  isAuthenticated: false,
+  clearError: vi.fn()
 }
 
 vi.mock('@/stores/auth', () => ({
@@ -29,6 +30,11 @@ describe('LoginPage', () => {
   let wrapper
 
   beforeEach(() => {
+    mockAuthStore.login.mockReset()
+    mockAuthStore.isAuthenticated = false
+    mockAuthStore.clearError.mockReset()
+    router.push.mockReset()
+
     wrapper = mount(LoginPage, {
       global: {
         plugins: [router, createPinia()],
@@ -36,10 +42,8 @@ describe('LoginPage', () => {
         stubs: { 'router-link': true }
       }
     })
-    vi.clearAllMocks()
   })
 
-  // 1. RENDERING TESTS
   it('renders all form elements', () => {
     expect(wrapper.find('h1').text()).toBe('Sign in to your account')
     expect(wrapper.find('#username').exists()).toBe(true)
@@ -48,87 +52,86 @@ describe('LoginPage', () => {
     expect(wrapper.find('img[alt="Logo BNI"]').exists()).toBe(true)
   })
 
-  // 2. FORM VALIDATION TESTS
-  it.skip('validates empty fields', async () => {
-    wrapper.vm.username = ''
-    wrapper.vm.password = ''
+  it('displays error on failed login', async () => {
+    mockAuthStore.login.mockResolvedValue({
+      success: false,
+      message: 'Invalid credentials.'
+    })
+
+    await wrapper.find('#username').setValue('wronguser')
+    await wrapper.find('#password').setValue('wrongpass')
     await wrapper.find('form').trigger('submit.prevent')
     await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('Username required.')
+
+    const errorBox = wrapper.find('.bg-red-100')
+    expect(errorBox.exists()).toBe(true)
+    expect(errorBox.text()).toContain('ERROR:')
+    expect(errorBox.text()).toContain('Invalid credentials.')
   })
 
-  it.skip('validates username format', async () => {
-    await wrapper.find('#username').setValue('user@test')
-    await wrapper.find('#password').setValue('password123')
-    await wrapper.find('form').trigger('submit.prevent')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('Incorrect username or password.')
-  })
-
-  it.skip('validates password length', async () => {
-    await wrapper.find('#username').setValue('testuser')
-    await wrapper.find('#password').setValue('123')
-    await wrapper.find('form').trigger('submit.prevent')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('Incorrect username or password.')
-  })
-
-  // 3. SUCCESSFUL LOGIN TESTS
-  it('handles successful login without MFA', async () => {
-    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: false })
+  it('navigates to dashboard on successful login without MFA', async () => {
+    mockAuthStore.login.mockResolvedValue({
+      success: true,
+      mfaRequired: false
+    })
     mockAuthStore.isAuthenticated = true
 
     await wrapper.find('#username').setValue('testuser')
     await wrapper.find('#password').setValue('password123')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('form').trigger('submit.prevent')
     await wrapper.vm.$nextTick()
 
-    // Assertions here
+    expect(mockAuthStore.login).toHaveBeenCalledWith({
+      username: 'testuser',
+      password: 'password123'
+    })
+    expect(router.push).toHaveBeenCalledWith('/dashboard')
   })
 
-  it('handles successful login with MFA', async () => {
-    mockAuthStore.login = vi.fn().mockResolvedValue({ success: true, mfaRequired: true })
+  it('navigates to OTP page on login with MFA required', async () => {
+    mockAuthStore.login.mockResolvedValue({
+      success: true,
+      mfaRequired: true
+    })
 
-    await wrapper.find('#username').setValue('testuser')
-    await wrapper.find('#password').setValue('Password123!')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('#username').setValue('mfauser')
+    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('form').trigger('submit.prevent')
     await wrapper.vm.$nextTick()
 
     expect(router.push).toHaveBeenCalledWith({ name: 'OTP' })
   })
 
-  // 4. ERROR HANDLING TESTS
-  it.skip('clears previous errors on new submission', async () => {
-    await wrapper.find('#username').setValue('')
-    await wrapper.find('#password').setValue('')
-    await wrapper.find('form').trigger('submit')
+  it('clears previous error on new login attempt', async () => {
+    mockAuthStore.login
+      .mockResolvedValueOnce({ success: false, message: 'First error.' })
+      .mockResolvedValueOnce({ success: true, mfaRequired: false })
+
+    await wrapper.find('#username').setValue('firstuser')
+    await wrapper.find('#password').setValue('wrongpass')
+    await wrapper.find('form').trigger('submit.prevent')
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('Username required.')
+    expect(wrapper.find('.bg-red-100').exists()).toBe(true)
 
-    mockAuthStore.login.mockResolvedValue({ success: true, mfaRequired: false })
-    await wrapper.find('#username').setValue('testuser')
-    await wrapper.find('#password').setValue('Password123!')
-    await wrapper.find('form').trigger('submit')
+    await wrapper.find('#username').setValue('correctuser')
+    await wrapper.find('#password').setValue('correctpass')
+    await wrapper.find('form').trigger('submit.prevent')
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).not.toContain('Username required.')
-    expect(wrapper.text()).not.toContain('Password required.')
+    expect(wrapper.find('.bg-red-100').exists()).toBe(false)
   })
 
-  // 5. INPUT INTERACTION TESTS
-  it('updates form data when typing', async () => {
-    await wrapper.find('#username').setValue('newuser')
-    await wrapper.find('#password').setValue('newpass123')
+  it('updates input values correctly', async () => {
+    await wrapper.find('#username').setValue('myuser')
+    await wrapper.find('#password').setValue('mypass123')
 
-    expect(wrapper.vm.username).toBe('newuser')
-    expect(wrapper.vm.password).toBe('newpass123')
+    expect(wrapper.vm.username).toBe('myuser')
+    expect(wrapper.vm.password).toBe('mypass123')
   })
 
-  // 7. COMPONENT PROPS TEST
   it('passes correct props to BaseInput components', () => {
     const inputs = wrapper.findAllComponents(BaseInput)
-
     expect(inputs[0].props('id')).toBe('username')
     expect(inputs[0].props('type')).toBe('text')
     expect(inputs[0].props('required')).toBe(true)
