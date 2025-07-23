@@ -120,13 +120,18 @@ export default {
         tokenError.value = 'Token reset diperlukan.';
       }
 
+     const PASSWORD_MIN_LENGTH_MESSAGE = 'Kata sandi minimal 8 karakter.';
+
       if (newPassword.value.length < 8) {
-        passwordError.value = 'Kata sandi minimal 8 karakter.';
+        passwordError.value = PASSWORD_MIN_LENGTH_MESSAGE;
       }
 
+      const PASSWORD_CONFIRMATION_MISMATCH_MESSAGE = 'Kata sandi tidak cocok.';
+
       if (newPassword.value !== confirmPassword.value) {
-        confirmPasswordError.value = 'Kata sandi tidak cocok.';
+        confirmPasswordError.value = PASSWORD_CONFIRMATION_MISMATCH_MESSAGE;
       }
+
     };
 
     const isFormValid = computed(() => {
