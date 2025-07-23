@@ -23,8 +23,10 @@ export default defineConfig({
         '**/tailwind.config.js',
         '**/vue.config.js', // Mengecualikan konfigurasi Vite
         '**/vitest.config.js',
+        '**/.eslintrc.js',
         '**/babel.config.js',
-        '**/src/views/SetNewPassword/index.vue', // Mengecualikan konfigurasi Vitest
+        '**/src/views/SetNewPassword/index.vue',
+         // Mengecualikan konfigurasi Vitest
         // Tambahkan pola lain jika ada file atau folder yang ingin dikecualikan
       ],
     }
