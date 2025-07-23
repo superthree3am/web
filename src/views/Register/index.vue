@@ -186,18 +186,18 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  // sonarqube-disable-next-line
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+  const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include uppercase, lowercase, number, and special character.';
 
   if (!passwordRegex.test(password.value)) {
-    // sonarqube-disable-next-line
-    formErrors.value.password = 'Must include upper, lower, number & special char.';
+    formErrors.value.password = PASSWORD_REQUIREMENTS_MESSAGE;
     hasError = true;
   }
-  
-  // sonarqube-disable-next-line
+
+  const PASSWORD_MISMATCH_MESSAGE = 'Passwords do not match.';
+
   if (password.value !== confirmPassword.value) {
-    formErrors.value.confirmPassword = 'Passwords do not match.';
+    formErrors.value.confirmPassword = PASSWORD_MISMATCH_MESSAGE;
     hasError = true;
   }
 
