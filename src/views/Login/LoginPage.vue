@@ -1,8 +1,11 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4 relative">
+    <!-- 🔄 LOADING OVERLAY -->
     <div
       v-if="isLoading"
-      class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center"
+  class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center"
+>
+
     >
       <svg class="h-12 w-12 text-orange-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -79,7 +82,7 @@
             <span v-else class="flex items-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               Loading...
             </span>
@@ -119,39 +122,26 @@ export default {
 
     const handleLogin = async () => {
       errorMessage.value = '';
-      isLoading.value = true;
 
-      // Client-side validation is commented out to only display backend errors
-      /*
-      if (!username.value) {
-        errorMessage.value = 'Username is required.';
-        isLoading.value = false;
-        return;
-      }
       const usernamePattern = /^[a-zA-Z0-9]+$/;
-      if (!usernamePattern.test(username.value)) {
-        errorMessage.value = 'Invalid username format.';
-        isLoading.value = false;
+
+      if (!username.value || !password.value) {
+        errorMessage.value = 'Username and password are required.';
         return;
       }
 
-      if (!password.value) {
-        errorMessage.value = 'Password is required.';
-        isLoading.value = false;
+      if (!usernamePattern.test(username.value)) {
+        errorMessage.value = 'Username can only contain letters and numbers.';
         return;
       }
+
+      /*
       if (password.value.length < 8) {
-        errorMessage.value = 'Password must be at least 8 characters long.';
-        isLoading.value = false;
+        errorMessage.value = 'Invalid username or password.';
         return;
-      }
-      const passwordPattern = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+[\\]{};':\"\\\\|,.<>/?~]).{8,}$");
-      if (!passwordPattern.test(password.value)) {
-        errorMessage.value = 'Password must contain uppercase, lowercase, numbers, and symbols.';
-        isLoading.value = false;
-        return;
-      }
-      */
+      } */
+
+      isLoading.value = true;
 
       try {
         const result = await authStore.login({
@@ -166,10 +156,9 @@ export default {
             router.push('/dashboard');
           }
         } else {
-          errorMessage.value = result.message || 'Login failed. Please try again.';
+          errorMessage.value = result.message;
         }
       } catch (error) {
-        console.error('Login process error:', error);
         errorMessage.value = 'Failed to connect to the server. Please try again.';
       } finally {
         isLoading.value = false;
@@ -201,4 +190,4 @@ export default {
 .animate-fade-in-down {
   animation: fade-in-down 0.5s ease-out forwards;
 }
-</style> 
+</style>
