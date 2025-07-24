@@ -154,6 +154,7 @@ export default {
           errorMessage.value = result.message;
         }
       } catch (error) {
+        console.error('Error during login:', error);
         errorMessage.value = 'Failed to connect to the server. Please try again.';
       } finally {
         isLoading.value = false;
