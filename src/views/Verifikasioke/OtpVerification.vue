@@ -105,7 +105,7 @@ export default {
 
     const onOtpInput = (index) => {
       let val = otpDigits.value[index];
-      val = val.replace(/[^0-9]/g, ''); 
+      val = val.replace(/\D/g, '');
       if (val.length > 1) {
           val = val.charAt(0);
       }
@@ -265,7 +265,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-
-</style>
