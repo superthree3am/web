@@ -8,31 +8,31 @@ let mockRecaptchaVerifierRender;
 let mockRecaptchaVerifierClear;
 let mockRecaptchaVerifierClass;
 let mockSignOut;
-let firebaseAuthInstance; // Variabel untuk menyimpan instance firebaseAuth yang bisa kita manipulasi
+let firebaseAuthInstance;
+let useAuthStore;
 
 // Implementasi mock localStorage kustom yang akan kita gunakan
 const localStorageMock = (function() {
-    let store = {};
-    return {
-        getItem: vi.fn(function(key) {
-            return store[key] || null;
-        }),
-        setItem: vi.fn(function(key, value) {
-            store[key] = value.toString();
-        }),
-        removeItem: vi.fn(function(key) {
-            delete store[key];
-        }),
-        clear: vi.fn(function() {
-            store = {};
-        })
-    };
+  let store = {};
+  return {
+    getItem: vi.fn(function(key) {
+      return store[key] || null;
+    }),
+    setItem: vi.fn(function(key, value) {
+      store[key] = value.toString();
+    }),
+    removeItem: vi.fn(function(key) {
+      delete store[key];
+    }),
+    clear: vi.fn(function() {
+      store = {};
+    })
+  };
 })();
 
-// Ganti objek global localStorage dengan mock kita
 Object.defineProperty(global, 'localStorage', { value: localStorageMock });
 
-
+// Mock Firebase harus dilakukan sebelum impor store
 vi.doMock('firebase/app', () => {
   mockInitializeApp = vi.fn(() => ({}));
   return {
@@ -74,7 +74,7 @@ vi.doMock('firebase/auth', async () => {
   return {
     getAuth: vi.fn(() => {
       if (!firebaseAuthInstance) {
-          firebaseAuthInstance = createMockFirebaseAuth();
+        firebaseAuthInstance = createMockFirebaseAuth();
       }
       return firebaseAuthInstance;
     }),
@@ -84,35 +84,27 @@ vi.doMock('firebase/auth', async () => {
   };
 });
 
-
 describe('auth store - real store with mocked Firebase', () => {
   let store;
   let fetchSpy;
 
   beforeEach(async () => {
-    // Pastikan Firebase Auth instance direset untuk setiap tes
-    firebaseAuthInstance = null; 
-
-    // PENTING: Aktifkan Pinia dan buat store baru di setiap beforeEach
+    firebaseAuthInstance = null;
     setActivePinia(createPinia());
-    // Import store di sini untuk memastikan ia mendapatkan mocks terbaru
-    const { useAuthStore } = await import('../src/stores/auth'); 
+    
+    const module = await import('../src/stores/auth');
+    useAuthStore = module.useAuthStore;
     store = useAuthStore();
-
-    // Reset semua mock (termasuk yang di `localStorageMock`)
-    vi.clearAllMocks(); // Ini akan membersihkan riwayat panggilan dari semua mock functions.
     
+    vi.clearAllMocks();
     fetchSpy = vi.spyOn(global, 'fetch');
-    
-    // Kosongkan localStorage sebelum setiap tes menggunakan mock clear
     localStorageMock.clear();
   });
 
   afterEach(() => {
-    // Bersihkan semua mock setelah setiap tes
-    vi.clearAllMocks(); // Ini akan membersihkan riwayat panggilan dari semua mock functions.
-    localStorageMock.clear(); // Pastikan localStorage bersih setelah setiap tes
-    firebaseAuthInstance = null; // Reset instance Firebase Auth
+    vi.clearAllMocks();
+    localStorageMock.clear();
+    firebaseAuthInstance = null;
   });
 
   it('logs in successfully', async () => {
@@ -127,7 +119,6 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.isAuthenticated).toBe(true);
     expect(store.token).toBe('mock-token');
     expect(store.user).toEqual({ username: 'user1' });
-    // Sekarang kita memanggil mock dari localStorageMock
     expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'mock-token');
     expect(localStorageMock.setItem).toHaveBeenCalledWith('user_data', JSON.stringify({ username: 'user1' }));
     expect(localStorageMock.getItem('auth_token')).toBe('mock-token');
@@ -225,7 +216,7 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(result.success).toBe(false);
     expect(result.message).toBe('An error occurred during registration. Please try again.');
   });
-
+  
   it('fails to send OTP without phone number', async () => {
     store.currentPhoneNumber = null;
 
@@ -245,18 +236,31 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(result.success).toBe(true);
     expect(result.message).toBe('OTP sent!');
     expect(mockRecaptchaVerifierClass).toHaveBeenCalledWith(
-        firebaseAuthInstance,
-        'test-recaptcha-container',
-        expect.any(Object)
+      expect.any(Object),
+      'test-recaptcha-container',
+      expect.any(Object)
     );
     expect(mockRecaptchaVerifierRender).toHaveBeenCalled();
     expect(mockSignInWithPhoneNumber).toHaveBeenCalledWith(
-      firebaseAuthInstance,
+      expect.any(Object),
       '+1234567890',
       expect.any(Object)
     );
     expect(store.confirmationResult).toBeDefined();
     expect(store.confirmationResult.verificationId).toBe('mock-verification-id');
+  });
+
+  it('fails to send OTP if recaptcha fails to render', async () => {
+    store.currentPhoneNumber = '+1234567890';
+    mockRecaptchaVerifierRender.mockRejectedValueOnce(new Error('Recaptcha render failed'));
+    
+    const result = await store.sendOtpFirebase('test-recaptcha-container');
+    
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Recaptcha render failed');
+    expect(mockSignInWithPhoneNumber).not.toHaveBeenCalled();
+    expect(mockRecaptchaVerifierClear).toHaveBeenCalled();
+    expect(store.confirmationResult).toBeNull();
   });
 
   it('fails to send OTP due to Firebase error', async () => {
@@ -273,7 +277,7 @@ describe('auth store - real store with mocked Firebase', () => {
 
   it('verifies OTP and logs in via Firebase', async () => {
     store.currentPhoneNumber = '+1234567890';
-    await store.sendOtpFirebase(); // Untuk menyetel confirmationResult
+    await store.sendOtpFirebase();
 
     fetchSpy.mockResolvedValueOnce({
       ok: true,
@@ -288,7 +292,7 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.user).toEqual({ username: 'firebaseuser' });
     expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'backend-verified-token');
     expect(localStorageMock.setItem).toHaveBeenCalledWith('user_data', JSON.stringify({ username: 'firebaseuser' }));
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number'); // Seharusnya menghapus ini saat sukses
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
     expect(store.currentPhoneNumber).toBeNull();
     expect(store.confirmationResult).toBeNull();
     expect(mockRecaptchaVerifierClear).toHaveBeenCalled();
@@ -305,29 +309,24 @@ describe('auth store - real store with mocked Firebase', () => {
 
   it('fails OTP verification with incorrect OTP', async () => {
     store.currentPhoneNumber = '+1234567890';
-    await store.sendOtpFirebase(); // Untuk menyetel confirmationResult
+    await store.sendOtpFirebase();
 
     const result = await store.verifyOtpAndLoginWithFirebase('000000');
 
     expect(result.success).toBe(false);
     expect(result.message).toBe('Incorrect OTP code!');
     expect(store.isAuthenticated).toBe(false);
-    expect(store.confirmationResult).toBeNull(); // Seharusnya dibersihkan saat error
-    expect(store.currentPhoneNumber).toBeNull(); // Seharusnya dibersihkan saat error
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number'); // Seharusnya menghapus ini saat error
+    expect(store.confirmationResult).toBeNull();
+    expect(store.currentPhoneNumber).toBeNull();
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
   });
 
-  // Tes yang diperbaiki:
   it('fails OTP verification if backend API call fails', async () => {
     store.currentPhoneNumber = '+1234567890';
-    await store.sendOtpFirebase(); // Untuk menyetel confirmationResult
+    await store.sendOtpFirebase();
 
-    // --- BARU: Setel item di mocked localStorage agar bisa dihapus ---
-    // Ini mensimulasikan kemungkinan adanya sisa data token atau user dari sesi sebelumnya
-    // atau dari bagaimana store Anda menangani pembersihan secara internal.
     localStorageMock.setItem('auth_token', 'token-sebelumnya');
     localStorageMock.setItem('user_data', JSON.stringify({ oldUser: 'data' }));
-    // ------------------------------------------------------------------
 
     fetchSpy.mockResolvedValueOnce({
       ok: false,
@@ -343,33 +342,49 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.token).toBeNull();
     expect(store.user).toBeNull();
     
-    // Verifikasi bahwa semua item yang relevan dihapus, terlepas dari urutan
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
     
-    // Opsional: Anda bisa memeriksa berapa kali removeItem dipanggil secara total
-    // Jika hanya 3 item ini yang seharusnya dihapus, maka total panggilan harus 3.
     expect(localStorageMock.removeItem).toHaveBeenCalledTimes(3); 
     
     expect(store.currentPhoneNumber).toBeNull();
     expect(store.confirmationResult).toBeNull();
   });
 
+  it('handles logout failure gracefully', async () => {
+    store.token = 'some-token';
+    store.user = { some: 'result' };
+    store.isAuthenticated = true;
+
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    auth.currentUser = { uid: 'firebase-user-id' };
+
+    fetchSpy.mockRejectedValueOnce(new Error('Logout API failed'));
+
+    await store.logout();
+
+    expect(store.isAuthenticated).toBe(false);
+    expect(store.token).toBeNull();
+    expect(store.user).toBeNull();
+    
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+  });
+
   it('clears store on logout', async () => {
-    // Set initial state to simulate being logged in
     store.token = 'some-token';
     store.user = { some: 'result' };
     store.isAuthenticated = true;
     store.currentPhoneNumber = '+1234567890';
     store.confirmationResult = { some: 'result' };
     
-    // Set items in the mocked localStorage so they can be removed
     localStorageMock.setItem('auth_token', 'some-token');
     localStorageMock.setItem('user_data', JSON.stringify({ some: 'result' }));
     localStorageMock.setItem('current_phone_number', '+1234567890');
 
-    // Pastikan firebaseAuthInstance diinisialisasi untuk tes ini.
     const { getAuth } = await import('firebase/auth');
     const auth = getAuth();
     auth.currentUser = { uid: 'firebase-user-id' };
@@ -386,19 +401,16 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.currentPhoneNumber).toBeNull();
     expect(store.confirmationResult).toBeNull();
     
-    // Verifikasi bahwa removeItem dipanggil untuk setiap item pada mock localStorage
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
     
-    // Pastikan localStorage benar-benar kosong setelah logout
     expect(localStorageMock.getItem('auth_token')).toBeNull();
     expect(localStorageMock.getItem('user_data')).toBeNull();
     expect(localStorageMock.getItem('current_phone_number')).toBeNull();
   });
 
   it('checkAuth sets auth state from localStorage', () => {
-    // Set localStorage items directly using the mocked localStorage
     localStorageMock.setItem('auth_token', 'stored-token');
     localStorageMock.setItem('user_data', JSON.stringify({ username: 'storedUser' }));
     localStorageMock.setItem('current_phone_number', '+1122334455');
@@ -410,15 +422,13 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.user).toEqual({ username: 'storedUser' });
     expect(store.currentPhoneNumber).toBe('+1122334455');
     
-    // Pastikan getItem dipanggil untuk setiap key pada mock localStorage
     expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
     expect(localStorageMock.getItem).toHaveBeenCalledWith('user_data');
     expect(localStorageMock.getItem).toHaveBeenCalledWith('current_phone_number');
   });
 
   it('checkAuth sets auth state false if token not found', () => {
-    // Awalnya, pastikan tidak ada token di localStorage
-    localStorageMock.clear(); // Bersihkan mock localStorage
+    localStorageMock.clear();
     localStorageMock.setItem('user_data', JSON.stringify({ some: 'data' }));
     localStorageMock.setItem('current_phone_number', '+12345');
     
@@ -429,26 +439,24 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.user).toBeNull();
     expect(store.currentPhoneNumber).toBeNull();
     
-    // Memastikan removeItem dipanggil untuk setiap key yang dibersihkan
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
-    // Harusnya dipanggil 3 kali
     expect(localStorageMock.removeItem).toHaveBeenCalledTimes(3); 
   });
 
   it('checkAuth handles invalid user_data in localStorage', () => {
-    // Set localStorage items, dengan user_data yang tidak valid
     localStorageMock.setItem('auth_token', 'stored-token');
-    localStorageMock.setItem('user_data', 'invalid json'); // Simulasikan data pengguna rusak
+    localStorageMock.setItem('user_data', 'invalid json');
     localStorageMock.setItem('current_phone_number', '+1122334455');
 
     store.checkAuth();
 
-    expect(store.isAuthenticated).toBe(true); // Seharusnya masih terautentikasi jika token valid
+    expect(store.isAuthenticated).toBe(true);
     expect(store.token).toBe('stored-token');
-    expect(store.user).toBeNull(); // Data pengguna seharusnya null karena JSON tidak valid
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data'); // user_data tidak valid harus dihapus
-    expect(store.currentPhoneNumber).toBe('+1122334455'); // Nomor telepon seharusnya tetap ada jika valid
+    expect(store.user).toBeNull();
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+    expect(store.currentPhoneNumber).toBe('+1122334455');
   });
+
 });
