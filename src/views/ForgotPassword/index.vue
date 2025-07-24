@@ -9,8 +9,8 @@
         Enter your email address to receive a reset token.
       </p>
 
-      <div v-if="authStore.error.value" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
-        <span class="font-semibold">ERROR: </span>{{ authStore.error.value }}
+      <div v-if="authStore.error" class="bg-red-100 border border-red-500 text-red-700 p-3 rounded mb-6">
+        <span class="font-semibold">ERROR: </span>{{ authStore.error }}
       </div>
 
       <form class="space-y-6" @submit.prevent="handleResetPassword">
@@ -29,12 +29,15 @@
         <div>
           <button
             type="submit"
-            :disabled="authStore.isLoading.value" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300"
+            :disabled="authStore.isLoading"
+            class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300"
           >
-            <span v-if="!authStore.isLoading.value">Reset Password</span> <span v-else class="flex items-center justify-center">
+            <span v-if="!authStore.isLoading">Reset Password</span>
+            <span v-else class="flex items-center justify-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
               </svg>
               Memuat...
             </span>
@@ -53,7 +56,7 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -72,12 +75,11 @@ export default {
         if (result.success) {
           router.push('/login');
         } else if (result.message) {
-          authStore.error.value = result.message;
+          authStore.error = result.message;
         }
       } catch (error) {
-        // --- PERBAIKAN UNTUK SONARQUBE: LOG ERROR ---
         console.error('Error during password reset:', error);
-        authStore.error.value = 'Terjadi kesalahan, coba lagi.';
+        authStore.error = 'Terjadi kesalahan, coba lagi.';
       }
     };
 
@@ -91,17 +93,17 @@ export default {
 </script>
 
 <style scoped>
-.bg-gradient-to-br {
-  background-image: linear-gradient(135deg, #7f8ce3, #9d4edd);
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-input:focus {
-  outline: none;
-  border-color: #4f46e5;
+.animate-fade-in-down {
+  animation: fade-in-down 0.5s ease-out forwards;
 }
 </style>
