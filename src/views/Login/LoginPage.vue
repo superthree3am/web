@@ -145,7 +145,7 @@ export default {
         isLoading.value = false;
         return;
       }
-      const passwordPattern = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+[\\]{};':\"\\\\|,.<>/?~`]).{8,}$");
+      const passwordPattern = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+[\\]{};':\"\\\\|,.<>/?~]).{8,}$");
       if (!passwordPattern.test(password.value)) {
         errorMessage.value = 'Password must contain uppercase, lowercase, numbers, and symbols.';
         isLoading.value = false;
