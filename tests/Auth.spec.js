@@ -53,6 +53,10 @@ vi.doMock('firebase/auth', async () => {
       if (code === '123456') {
         return Promise.resolve({ user: { getIdToken: vi.fn(() => 'mock-firebase-id-token') } });
       }
+      // Tambahkan mock untuk skenario error lain
+      if (code === '999999') {
+        return Promise.reject({ code: 'auth/too-many-requests', message: 'Too many attempts. Try again later.' });
+      }
       return Promise.reject({ code: 'auth/invalid-verification-code', message: 'The verification code is invalid.' });
     }),
   }));
@@ -321,6 +325,22 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
   });
 
+  // Perbaikan pada test case ini: pesan error yang diharapkan sudah disesuaikan
+  it('fails OTP verification with generic Firebase error', async () => {
+    store.currentPhoneNumber = '+1234567890';
+    await store.sendOtpFirebase();
+
+    const result = await store.verifyOtpAndLoginWithFirebase('999999');
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Too many attempts. Try again later.'); // Menggunakan pesan yang benar
+    expect(store.isAuthenticated).toBe(false);
+    expect(store.confirmationResult).toBeNull();
+    expect(store.currentPhoneNumber).toBeNull();
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
+    expect(mockRecaptchaVerifierClear).toHaveBeenCalled();
+  });
+
   it('fails OTP verification if backend API call fails', async () => {
     store.currentPhoneNumber = '+1234567890';
     await store.sendOtpFirebase();
@@ -372,6 +392,31 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(mockSignOut).toHaveBeenCalled();
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+  });
+
+  it('handles Firebase signOut failure during logout', async () => {
+    store.token = 'some-token';
+    store.user = { some: 'result' };
+    store.isAuthenticated = true;
+
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    auth.currentUser = { uid: 'firebase-user-id' };
+
+    // Mock signOut to reject
+    mockSignOut.mockRejectedValueOnce(new Error('Firebase signOut failed'));
+    fetchSpy.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+
+    await store.logout();
+
+    // Meskipun signOut gagal, state harus tetap dibersihkan
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(store.isAuthenticated).toBe(false);
+    expect(store.token).toBeNull();
+    expect(store.user).toBeNull();
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
   });
 
   it('clears store on logout', async () => {
@@ -457,6 +502,23 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(store.user).toBeNull();
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('user_data');
     expect(store.currentPhoneNumber).toBe('+1122334455');
+  });
+
+  it('checkAuth handles current_phone_number being null or empty', () => {
+    localStorageMock.setItem('auth_token', 'stored-token');
+    localStorageMock.setItem('user_data', JSON.stringify({ username: 'storedUser' }));
+    localStorageMock.removeItem('current_phone_number');
+
+    store.checkAuth();
+
+    expect(store.isAuthenticated).toBe(true);
+    expect(store.token).toBe('stored-token');
+    expect(store.user).toEqual({ username: 'storedUser' });
+    expect(store.currentPhoneNumber).toBeNull();
+    
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('auth_token');
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('user_data');
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('current_phone_number');
   });
 
 });
