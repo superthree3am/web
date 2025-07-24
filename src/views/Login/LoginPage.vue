@@ -201,4 +201,4 @@ export default {
 .animate-fade-in-down {
   animation: fade-in-down 0.5s ease-out forwards;
 }
-</style>
+</style> 
