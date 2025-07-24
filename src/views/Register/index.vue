@@ -144,7 +144,7 @@ const passwordStrengthLabel = computed(() => {
       return 'Very Strong';
     default:
       return '';
-  }
+  } //
 });
 
 const passwordStrengthClass = computed(() => {
@@ -233,6 +233,6 @@ const handleRegister = async () => {
   }
 }
 .animate-fade-in-down {
-  animation: fade-in-down 0.5s ease-out forwards;
+  animation: fade-in-down 0.5s ease-out forwards; 
 }
 </style>
