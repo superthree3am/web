@@ -58,14 +58,9 @@
               Remember me
             </label>
           </div>
-          <div class="text-sm">
-            <router-link
-              to="/forgot-password"
-              class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out"
-            >
-              Forgot password?
-            </router-link>
-          </div>
+           <div class="text-sm">
+              
+          </div> 
         </div>
 
         <div>
