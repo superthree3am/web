@@ -1,23 +1,26 @@
 # Build Stage
 FROM node:20-alpine AS build-stage
 WORKDIR /app
+
 COPY package*.json ./
 RUN yarn install --frozen-lockfile
 COPY . .
-ENV VUE_APP_SERVICE_API=
+
+# Tambahkan ARG agar bisa diisi saat docker build
+ARG VUE_APP_SERVICE_API
+ENV VUE_APP_SERVICE_API=$VUE_APP_SERVICE_API
+
+# Jalankan build, ENV VUE_APP_SERVICE_API akan di-inject oleh Vue CLI/Vite
 RUN yarn build
 
 # Production Stage - Node.js Serve Static
 FROM node:20-alpine AS production-stage
 WORKDIR /app
 
-# Install 'serve' (static file server)
 RUN yarn global add serve
 
-# Copy build result from build-stage
 COPY --from=build-stage /app/dist /app/dist
 
-EXPOSE 3000
+EXPOSE 8080
 
-# Jalankan 'serve' untuk hasil build di folder /app/dist
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["serve", "-s", "dist", "-l", "8080"]
