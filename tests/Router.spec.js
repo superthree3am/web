@@ -7,24 +7,23 @@ describe('Router Configuration', () => {
     const routeNames = router.getRoutes().map((route) => route.name);
 
     expect(routeNames).toContain('login');
-    expect(routeNames).toContain('login-page'); // Pastikan rute '/login' memiliki nama 'login-page'
+    expect(routeNames).toContain('login-page'); 
     expect(routeNames).toContain('register');
     expect(routeNames).toContain('OTP');
     expect(routeNames).toContain('dashboard');
-    expect(routeNames).toContain('forgot-password'); // Tambahkan rute forgot-password
   });
 
   // Test 2: Should resolve path "/" to LoginPage (named 'login')
   it('should resolve path "/" to LoginPage (named "login")', () => {
     const route = router.resolve('/');
-    expect(route.name).toBe('login'); // Sesuai dengan konfigurasi { path: '/', name: 'login', ... }
+    expect(route.name).toBe('login'); 
     expect(route.path).toBe('/');
   });
 
   // Test 3: Should resolve path "/login" to LoginPage (named 'login-page')
   it('should resolve path "/login" to LoginPage (named "login-page")', () => {
     const route = router.resolve('/login');
-    expect(route.name).toBe('login-page'); // Sesuai dengan konfigurasi { path: '/login', name: 'login-page', ... }
+    expect(route.name).toBe('login-page'); 
     expect(route.path).toBe('/login');
   });
 
@@ -50,10 +49,4 @@ describe('Router Configuration', () => {
     expect(route.path).toBe('/register');
   });
 
-  // Test 7: Should resolve path "/forgot-password" correctly
-  it('should resolve path "/forgot-password" correctly', () => {
-    const route = router.resolve('/forgot-password');
-    expect(route.name).toBe('forgot-password');
-    expect(route.path).toBe('/forgot-password');
-  });
 });

@@ -1,7 +1,7 @@
 // test/unit/ApiDataComponent.spec.js
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import ApiDataComponent from '../src/components/ApiDataComponent.vue' // Jalur impor diperbaiki
+import ApiDataComponent from '../src/components/ApiDataComponent.vue' 
 import axios from 'axios'
 
 vi.mock('axios')

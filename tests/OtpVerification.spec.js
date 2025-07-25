@@ -6,7 +6,6 @@ import { createTestingPinia } from '@pinia/testing';
 import { createRouter, createWebHistory } from 'vue-router';
 import { vi } from 'vitest';
 
-// Konfigurasi router untuk pengujian
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -16,7 +15,6 @@ const router = createRouter({
   ],
 });
 
-// Mock fungsi-fungsi dari auth store
 let mockVerifyOtpAndLoginWithFirebase = vi.fn();
 let mockSendOtpFirebase = vi.fn();
 let mockCurrentPhoneNumber = vi.fn();
@@ -340,7 +338,6 @@ describe('OtpVerification.vue', () => {
     await wrapper.vm.$nextTick();
   });
 
-  // Tes Pengganti untuk 'shows loading state during resend OTP' (Sebelumnya Tes 12)
   it('ensures the resend OTP button is present', async () => {
     const wrapper = mount(OtpVerification, {
       global: {
@@ -354,7 +351,6 @@ describe('OtpVerification.vue', () => {
     expect(resendButton.text()).toContain('Resend OTP');
   });
 
-  // Tes Pengganti untuk 'shows recaptcha container while loading' (Sebelumnya Tes 14)
   it('ensures recaptcha container is hidden after successful init', async () => {
     const wrapper = mount(OtpVerification, {
       global: {
@@ -367,7 +363,6 @@ describe('OtpVerification.vue', () => {
     expect(wrapper.find('#recaptcha-container').exists()).toBe(false);
   });
 
-  // Tes Pengganti untuk 'clears OTP inputs and focuses first input on successful recaptcha init/resend' (Sebelumnya Tes 15)
   it('initializes OTP inputs as empty on mount', async () => {
     const wrapper = mount(OtpVerification, {
       global: {
@@ -380,7 +375,6 @@ describe('OtpVerification.vue', () => {
     expect(wrapper.findAll('input[type="text"][maxlength="1"]').every(input => input.element.value === '')).toBe(true);
   });
 
-  // Tes 16: Memastikan onOtpBackspace berfungsi dengan benar
   it('handles backspace correctly', async () => {
     const wrapper = mount(OtpVerification, {
       global: {
@@ -394,7 +388,6 @@ describe('OtpVerification.vue', () => {
     const inputs = wrapper.findAll('input[type="text"][maxlength="1"]');
     expect(inputs.length).toBe(6);
 
-    // Scenario 1: Input '123' then backspace on 3rd input (should clear '3', keep focus on 3rd input)
     await inputs[0].setValue('1'); await inputs[0].trigger('input'); await wrapper.vm.$nextTick();
     await inputs[1].setValue('2'); await inputs[1].trigger('input'); await wrapper.vm.$nextTick();
     await inputs[2].setValue('3'); await inputs[2].trigger('input'); await wrapper.vm.$nextTick();
@@ -409,7 +402,6 @@ describe('OtpVerification.vue', () => {
     expect(focusSpy1).not.toHaveBeenCalled();
     focusSpy1.mockRestore();
 
-    // Scenario 2: Input '12', clear '2' (inputs[1] is now empty), then backspace again on inputs[1]
     wrapper.vm.otpDigits = ['', '', '', '', '', ''];
     await wrapper.vm.$nextTick();
     await inputs[0].setValue('1'); await inputs[0].trigger('input'); await wrapper.vm.$nextTick();

@@ -1,7 +1,7 @@
 // test/unit/AlertMessage.spec.js
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
-import AlertMessage from '../src/components/AlertMessage.vue' // Jalur impor diperbaiki
+import AlertMessage from '../src/components/AlertMessage.vue' 
 
 describe('AlertMessage.vue', () => {
   it('renders success alert when visible', () => {

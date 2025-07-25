@@ -1,7 +1,6 @@
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 
-// Deklarasikan variabel untuk menyimpan referensi ke mock functions
 let mockInitializeApp;
 let mockSignInWithPhoneNumber;
 let mockRecaptchaVerifierRender;
@@ -11,7 +10,6 @@ let mockSignOut;
 let firebaseAuthInstance;
 let useAuthStore;
 
-// Implementasi mock localStorage kustom yang akan kita gunakan
 const localStorageMock = (function() {
   let store = {};
   return {
@@ -32,7 +30,6 @@ const localStorageMock = (function() {
 
 Object.defineProperty(global, 'localStorage', { value: localStorageMock });
 
-// Mock Firebase harus dilakukan sebelum impor store
 vi.doMock('firebase/app', () => {
   mockInitializeApp = vi.fn(() => ({}));
   return {
@@ -53,7 +50,7 @@ vi.doMock('firebase/auth', async () => {
       if (code === '123456') {
         return Promise.resolve({ user: { getIdToken: vi.fn(() => 'mock-firebase-id-token') } });
       }
-      // Tambahkan mock untuk skenario error lain
+      
       if (code === '999999') {
         return Promise.reject({ code: 'auth/too-many-requests', message: 'Too many attempts. Try again later.' });
       }
@@ -325,7 +322,7 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
   });
 
-  // Perbaikan pada test case ini: pesan error yang diharapkan sudah disesuaikan
+
   it('fails OTP verification with generic Firebase error', async () => {
     store.currentPhoneNumber = '+1234567890';
     await store.sendOtpFirebase();
@@ -333,7 +330,7 @@ describe('auth store - real store with mocked Firebase', () => {
     const result = await store.verifyOtpAndLoginWithFirebase('999999');
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe('Too many attempts. Try again later.'); // Menggunakan pesan yang benar
+    expect(result.message).toBe('Too many attempts. Try again later.'); 
     expect(store.isAuthenticated).toBe(false);
     expect(store.confirmationResult).toBeNull();
     expect(store.currentPhoneNumber).toBeNull();
@@ -409,7 +406,6 @@ describe('auth store - real store with mocked Firebase', () => {
 
     await store.logout();
 
-    // Meskipun signOut gagal, state harus tetap dibersihkan
     expect(mockSignOut).toHaveBeenCalled();
     expect(store.isAuthenticated).toBe(false);
     expect(store.token).toBeNull();

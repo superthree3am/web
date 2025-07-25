@@ -36,9 +36,7 @@ describe('DashboardPage.vue', () => {
   let authStore;
   let pinia;
 
-  // Make sure the router is ready before all tests run
   beforeAll(async () => {
-    // Navigasi ke dashboard sebagai kondisi awal untuk testing logout
     await router.push('/');
     await router.isReady();
   });
@@ -70,9 +68,8 @@ describe('DashboardPage.vue', () => {
       authStore.user = null;
       authStore.token = null;
       localStorage.removeItem('token');
-      // Simulate router navigation and wait for it to complete
       await router.push('/login');
-      await router.isReady(); // Ensure the router has processed the navigation
+      await router.isReady(); 
     });
 
     // Mock checkAuth and getProfile to prevent real calls
@@ -124,24 +121,20 @@ describe('DashboardPage.vue', () => {
 
     await logoutBtn.trigger('click');
 
-    // **Crucial Change:** Wait for the router's reactive state to update after navigation.
-    // We'll repeatedly await nextTick until the route is what we expect, or a timeout occurs.
-    // This is more robust for async router changes in tests.
     await new Promise(resolve => {
         const checkRoute = () => {
             if (router.currentRoute.value.path === '/login') {
                 resolve();
             } else {
-                nextTick(checkRoute); // Try again on the next tick
+                nextTick(checkRoute); 
             }
         };
         checkRoute();
     });
     
-    // Assertions for post-logout conditions
     expect(authStore.logout).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('token')).toBe(null);
-    expect(router.currentRoute.value.path).toBe('/login'); // This should now pass consistently
+    expect(router.currentRoute.value.path).toBe('/login'); 
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.user).toBe(null);
     expect(authStore.token).toBe(null);

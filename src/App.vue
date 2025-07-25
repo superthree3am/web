@@ -13,8 +13,8 @@ export default {
 <style scoped>
 #app {
   background-image: url('@/assets/background8.jpg');
-  background-size: cover;  /* Menyesuaikan gambar untuk menutupi seluruh area */
-  background-position: center; /* Memastikan gambar berada di tengah */
-  min-height: 100vh; /* Pastikan gambar mengisi seluruh layar vertikal */
+  background-size: cover;  
+  background-position: center; 
+  min-height: 100vh; 
 }
 </style>
