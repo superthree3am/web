@@ -186,14 +186,20 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-  if (!passwordRegex.test(password.value)) {
-    formErrors.value.password = 'Must include upper, lower, number & special char.';
+  const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include uppercase, lowercase, number, and special character.';
+  const PASSWORD_MISMATCH_MESSAGE = 'Passwords do not match.';
+
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+  const isPasswordValid = passwordPattern.test(password.value);
+  if (!isPasswordValid) {
+    formErrors.value.password = PASSWORD_REQUIREMENTS_MESSAGE;
     hasError = true;
   }
 
-  if (password.value !== confirmPassword.value) {
-    formErrors.value.confirmPassword = 'Passwords do not match.';
+  const isPasswordMatch = password.value === confirmPassword.value;
+  if (!isPasswordMatch) {
+    formErrors.value.confirmPassword = PASSWORD_MISMATCH_MESSAGE;
     hasError = true;
   }
 
