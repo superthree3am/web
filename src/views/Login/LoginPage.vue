@@ -31,6 +31,7 @@
           type="text"
           placeholder="Enter your username"
           autocomplete="username"
+          name="username"
           v-model="username"
           required
         />

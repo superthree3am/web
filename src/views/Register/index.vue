@@ -30,10 +30,10 @@
       />
 
       <form class="space-y-6" @submit.prevent="handleRegister">
-        <BaseInput id="fullName" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="name" required v-model="fullName" :errorMessage="formErrors.fullName" />
+        <BaseInput id="fullName" name="fullName" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="name" required v-model="fullName" :errorMessage="formErrors.fullName" />
         <BaseInput id="email" label="Email Address" type="email" placeholder="Enter your email address" autocomplete="email" required v-model="email" :errorMessage="formErrors.email" />
         <BaseInput id="phone" label="Phone Number" type="tel" placeholder="Enter your phone number" autocomplete="tel" required v-model="phone" :errorMessage="formErrors.phone" />        
-        <BaseInput id="username" label="Username" type="text" placeholder="Enter your username" autocomplete="username" required v-model="username" :errorMessage="formErrors.username" />
+        <BaseInput id="username"  name="username" label="Username" type="text" placeholder="Enter your username" autocomplete="username" required v-model="username" :errorMessage="formErrors.username" />
 
         <div>
           <BaseInput id="password" label="Password" type="password" placeholder="Create New Password" autocomplete="new-password" required v-model="password" :errorMessage="formErrors.password" :isPasswordToggle="true" />
@@ -148,15 +148,23 @@ const passwordStrengthLabel = computed(() => {
 });
 
 const passwordStrengthClass = computed(() => {
-  return [
-    'transition-all duration-300',
-    passwordStrength.value <= 1 ? 'bg-red-400 w-1/5' :
-    passwordStrength.value === 2 ? 'bg-orange-400 w-2/5' :
-    passwordStrength.value === 3 ? 'bg-yellow-400 w-3/5' :
-    passwordStrength.value === 4 ? 'bg-green-400 w-4/5' :
-    'bg-green-600 w-full'
-  ];
+  let strengthClass = '';
+
+  if (passwordStrength.value <= 1) {
+    strengthClass = 'bg-red-400 w-1/5';
+  } else if (passwordStrength.value === 2) {
+    strengthClass = 'bg-orange-400 w-2/5';
+  } else if (passwordStrength.value === 3) {
+    strengthClass = 'bg-yellow-400 w-3/5';
+  } else if (passwordStrength.value === 4) {
+    strengthClass = 'bg-green-400 w-4/5';
+  } else {
+    strengthClass = 'bg-green-600 w-full';
+  }
+
+  return ['transition-all duration-300', strengthClass];
 });
+
 
 const handleRegister = async () => {
   Object.keys(formErrors.value).forEach(key => formErrors.value[key] = '');
