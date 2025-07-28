@@ -171,10 +171,13 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+  if (!emailPattern.test(email.value)) {
     formErrors.value.email = 'Invalid email format.';
     hasError = true;
   }
+
 
   if (!/^\+62\d{10,11}$/.test(phone.value)) {
     formErrors.value.phone = 'Phone must start with +62 and be 10–11 digits.';
