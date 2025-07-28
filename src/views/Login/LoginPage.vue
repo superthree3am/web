@@ -25,16 +25,15 @@
       </div>
 
       <form class="space-y-6" @submit.prevent="handleLogin">
-       <BaseInput
+        <BaseInput
           id="username"
-          name="username"
           label="Username"
           type="text"
           placeholder="Enter your username"
           autocomplete="username"
+          name="username"
           v-model="username"
           required
-          :errorMessage="formErrors.username"
         />
 
         <BaseInput
