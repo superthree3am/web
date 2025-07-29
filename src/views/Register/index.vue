@@ -197,8 +197,8 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include uppercase, lowercase, number, and special character.';
-  const PASSWORD_MISMATCH_MESSAGE = 'Passwords do not match.';
+  const PASSWORD_REQUIREMENTS_MESSAGE = 'Must include uppercase, lowercase, number, and special character.';
+  const PASSWORD_MISMATCH_MESSAGE = 'Do not match.';
 
   const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
