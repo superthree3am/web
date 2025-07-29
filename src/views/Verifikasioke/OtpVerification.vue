@@ -35,6 +35,9 @@
       <div v-if="showRecaptchaContainer" id="recaptcha-container" class="mt-4 flex justify-center"></div>
 
       <form v-if="!isRecaptchaLoading" class="space-y-6" @submit.prevent="handleOtpVerification">
+        <p class="text-center text-gray-800 font-medium text-base">
+        OTP Code (6 Digits)
+        </p>
         <div class="flex justify-center space-x-2">
           <input
             v-for="(digit, index) in otpDigits"
