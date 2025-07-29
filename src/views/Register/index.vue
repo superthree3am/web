@@ -30,10 +30,10 @@
       />
 
       <form class="space-y-6" @submit.prevent="handleRegister">
-       <BaseInput id="fullName" name="name" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="name" required v-model="fullName" :errorMessage="formErrors.fullName" />
+       <BaseInput id="fullName" name="name" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="off" required v-model="fullName" :errorMessage="formErrors.fullName" />
        <BaseInput id="email" name="email" label="Email Address" type="email" placeholder="Enter your email address" autocomplete="email" required v-model="email" :errorMessage="formErrors.email" />
        <BaseInput id="phone" name="tel" label="Phone Number" type="tel" placeholder="Enter your phone number" autocomplete="tel" required v-model="phone" :errorMessage="formErrors.phone" />
-       <BaseInput id="username" name="username" label="Username" type="text" placeholder="Enter your username" autocomplete="username" required v-model="username" :errorMessage="formErrors.username" />
+       <BaseInput id="username" name="username" label="Username" type="text" placeholder="Enter your username" autocomplete="off" required v-model="username" :errorMessage="formErrors.username" />
 
         <div>
           <BaseInput id="password" label="Password" type="password" placeholder="Create New Password" autocomplete="new-password" required v-model="password" :errorMessage="formErrors.password" :isPasswordToggle="true" />
@@ -197,8 +197,8 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  const PASSWORD_REQUIREMENTS_MESSAGE = 'Must include uppercase, lowercase, number, and special character.';
-  const PASSWORD_MISMATCH_MESSAGE = 'Do not match.';
+  const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include uppercase, lowercase, number, and special character.';
+  const PASSWORD_MISMATCH_MESSAGE = 'Password do not match.';
 
   const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
