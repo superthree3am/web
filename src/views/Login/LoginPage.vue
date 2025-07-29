@@ -31,7 +31,7 @@
           label="Username"
           type="text"
           placeholder="Enter your username"
-          autocomplete="username"
+          autocomplete="off"
           v-model="username"
           required
         />
