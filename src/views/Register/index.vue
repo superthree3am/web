@@ -30,10 +30,45 @@
       />
 
       <form class="space-y-6" @submit.prevent="handleRegister">
-        <BaseInput id="fullName" name="name" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="name" required v-model="fullName" :errorMessage="formErrors.fullName" />
-        <BaseInput id="email" label="Email Address" type="email" placeholder="Enter your email address" autocomplete="email" required v-model="email" :errorMessage="formErrors.email" />
-        <BaseInput id="phone" label="Phone Number" type="tel" placeholder="Enter your phone number" autocomplete="tel" required v-model="phone" :errorMessage="formErrors.phone" />        
-        <BaseInput id="username"  name="username" label="Username" type="text" placeholder="Enter your username" autocomplete="username" required v-model="username" :errorMessage="formErrors.username" />
+       <BaseInput id="fullName" name="name" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="name" required v-model="fullName"
+  :errorMessage="formErrors.fullName"
+/>
+
+<BaseInput
+  id="email"
+  name="email"
+  label="Email Address"
+  type="email"
+  placeholder="Enter your email address"
+  autocomplete="email"
+  required
+  v-model="email"
+  :errorMessage="formErrors.email"
+/>
+
+<BaseInput
+  id="phone"
+  name="tel"
+  label="Phone Number"
+  type="tel"
+  placeholder="Enter your phone number"
+  autocomplete="tel"
+  required
+  v-model="phone"
+  :errorMessage="formErrors.phone"
+/>
+
+<BaseInput
+  id="username"
+  name="username"
+  label="Username"
+  type="text"
+  placeholder="Enter your username"
+  autocomplete="username"
+  required
+  v-model="username"
+  :errorMessage="formErrors.username"
+/>
 
         <div>
           <BaseInput id="password" label="Password" type="password" placeholder="Create New Password" autocomplete="new-password" required v-model="password" :errorMessage="formErrors.password" :isPasswordToggle="true" />
