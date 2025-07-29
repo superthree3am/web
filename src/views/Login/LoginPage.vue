@@ -27,6 +27,7 @@
       <form class="space-y-6" @submit.prevent="handleLogin">
         <BaseInput
           id="username"
+          name="username"
           label="Username"
           type="text"
           placeholder="Enter your username"
