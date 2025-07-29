@@ -12,7 +12,7 @@
           Logout
         </button>
       </div>
-    </nav> //
+    </nav> 
 
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <h1 class="text-3xl font-bold text-gray-900 mb-6 animate-fade-in-up">Selamat Datang, {{ authStore.user ? authStore.user.fullName : 'Pengguna' }}!</h1>
