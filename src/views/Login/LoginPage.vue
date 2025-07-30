@@ -3,20 +3,15 @@
     <!-- 🔄 LOADING OVERLAY -->
     <div
       v-if="isLoading"
-  class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center"
->
-
+      class="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center"
     >
       <svg class="h-12 w-12 text-orange-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path class="opacity-75" fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
       </svg>
     </div>
 
-    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
-
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
       <div class="flex justify-center mb-6">
         <img class="h-28 w-auto" src="@/assets/BNI.webp" alt="Logo BNI" />
       </div>
@@ -32,10 +27,11 @@
       <form class="space-y-6" @submit.prevent="handleLogin">
         <BaseInput
           id="username"
+          name="username"
           label="Username"
           type="text"
           placeholder="Enter your username"
-          autocomplete="username"
+          autocomplete="off"
           v-model="username"
           required
         />
@@ -63,19 +59,16 @@
               Remember me
             </label>
           </div>
-          <div class="text-sm">
-            <router-link to="/forgot-password" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out">
-              Forgot password?
-            </router-link>
-          </div>
+           <div class="text-sm">
+              
+          </div> 
         </div>
 
         <div>
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
-                     transition-all duration-300 ease-in-out"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
           >
             <span v-if="!isLoading">Login</span>
@@ -126,18 +119,17 @@ export default {
       const usernamePattern = /^[a-zA-Z0-9]+$/;
 
       if (!username.value || !password.value) {
-        errorMessage.value = 'Username and password are required.';
+        console.warn('Username and password are required.');
         return;
       }
 
       if (!usernamePattern.test(username.value)) {
-        errorMessage.value = 'Username can only contain letters and numbers.';
+        console.warn('Username can only contain letters and numbers.');
         return;
       }
 
       if (password.value.length < 8) {
-        errorMessage.value = 'Password must be at least 8 characters long.';
-        return;
+        console.warn('Password must be at least 8 characters.');
       }
 
       isLoading.value = true;
@@ -158,6 +150,7 @@ export default {
           errorMessage.value = result.message;
         }
       } catch (error) {
+        console.error('Error during login:', error);
         errorMessage.value = 'Failed to connect to the server. Please try again.';
       } finally {
         isLoading.value = false;

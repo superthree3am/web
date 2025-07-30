@@ -30,10 +30,10 @@
       />
 
       <form class="space-y-6" @submit.prevent="handleRegister">
-        <BaseInput id="fullName" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="name" required v-model="fullName" :errorMessage="formErrors.fullName" />
-        <BaseInput id="email" label="Email Address" type="email" placeholder="Enter your email address" autocomplete="email" required v-model="email" :errorMessage="formErrors.email" />
-        <BaseInput id="phone" label="Phone Number" type="tel" placeholder="Enter your phone number" autocomplete="tel" required v-model="phone" :errorMessage="formErrors.phone" />        
-        <BaseInput id="username" label="Username" type="text" placeholder="Enter your username" autocomplete="username" required v-model="username" :errorMessage="formErrors.username" />
+       <BaseInput id="fullName" name="name" label="Full Name" type="text" placeholder="Enter your full name" autocomplete="off" required v-model="fullName" :errorMessage="formErrors.fullName" />
+       <BaseInput id="email" name="email" label="Email Address" type="email" placeholder="Enter your email address" autocomplete="email" required v-model="email" :errorMessage="formErrors.email" />
+       <BaseInput id="phone" name="tel" label="Phone Number" type="tel" placeholder="Enter your phone number" autocomplete="tel" required v-model="phone" :errorMessage="formErrors.phone" />
+       <BaseInput id="username" name="username" label="Username" type="text" placeholder="Enter your username" autocomplete="off" required v-model="username" :errorMessage="formErrors.username" />
 
         <div>
           <BaseInput id="password" label="Password" type="password" placeholder="Create New Password" autocomplete="new-password" required v-model="password" :errorMessage="formErrors.password" :isPasswordToggle="true" />
@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/components/BaseInput.vue';
@@ -144,19 +144,27 @@ const passwordStrengthLabel = computed(() => {
       return 'Very Strong';
     default:
       return '';
-  }
+  } //
 });
 
 const passwordStrengthClass = computed(() => {
-  return [
-    'transition-all duration-300',
-    passwordStrength.value <= 1 ? 'bg-red-400 w-1/5' :
-    passwordStrength.value === 2 ? 'bg-orange-400 w-2/5' :
-    passwordStrength.value === 3 ? 'bg-yellow-400 w-3/5' :
-    passwordStrength.value === 4 ? 'bg-green-400 w-4/5' :
-    'bg-green-600 w-full'
-  ];
+  let strengthClass = '';
+
+  if (passwordStrength.value <= 1) {
+    strengthClass = 'bg-red-400 w-1/5';
+  } else if (passwordStrength.value === 2) {
+    strengthClass = 'bg-orange-400 w-2/5';
+  } else if (passwordStrength.value === 3) {
+    strengthClass = 'bg-yellow-400 w-3/5';
+  } else if (passwordStrength.value === 4) {
+    strengthClass = 'bg-green-400 w-4/5';
+  } else {
+    strengthClass = 'bg-green-600 w-full';
+  }
+
+  return ['transition-all duration-300', strengthClass];
 });
+
 
 const handleRegister = async () => {
   Object.keys(formErrors.value).forEach(key => formErrors.value[key] = '');
@@ -171,10 +179,13 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+  if (!emailPattern.test(email.value)) {
     formErrors.value.email = 'Invalid email format.';
     hasError = true;
   }
+
 
   if (!/^\+62\d{10,11}$/.test(phone.value)) {
     formErrors.value.phone = 'Phone must start with +62 and be 10–11 digits.';
@@ -186,14 +197,20 @@ const handleRegister = async () => {
     hasError = true;
   }
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-  if (!passwordRegex.test(password.value)) {
-    formErrors.value.password = 'Must include upper, lower, number & special char.';
+  const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include uppercase, lowercase, number, and special character.';
+  const PASSWORD_MISMATCH_MESSAGE = 'Password do not match.';
+
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+  const isPasswordValid = passwordPattern.test(password.value);
+  if (!isPasswordValid) {
+    formErrors.value.password = PASSWORD_REQUIREMENTS_MESSAGE;
     hasError = true;
   }
 
-  if (password.value !== confirmPassword.value) {
-    formErrors.value.confirmPassword = 'Passwords do not match.';
+  const isPasswordMatch = password.value === confirmPassword.value;
+  if (!isPasswordMatch) {
+    formErrors.value.confirmPassword = PASSWORD_MISMATCH_MESSAGE;
     hasError = true;
   }
 
@@ -233,6 +250,6 @@ const handleRegister = async () => {
   }
 }
 .animate-fade-in-down {
-  animation: fade-in-down 0.5s ease-out forwards;
+  animation: fade-in-down 0.5s ease-out forwards; 
 }
 </style>

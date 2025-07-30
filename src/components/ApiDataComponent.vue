@@ -16,9 +16,9 @@ export default {
   name: 'ApiDataComponent',
   data() {
     return {
-      data: null, // Menyimpan data dari API
-      isLoading: false, // Menyimpan status loading
-      errorMessage: '', // Menyimpan pesan error
+      data: null,
+      isLoading: false,
+      errorMessage: '',
     };
   },
   created() {
@@ -26,20 +26,35 @@ export default {
   },
   methods: {
     async fetchData() {
-      this.isLoading = true; // Menandakan proses sedang berlangsung
-      this.errorMessage = ''; // Reset pesan error
+      this.isLoading = true;
+      this.errorMessage = '';
       try {
-        // Menggunakan URL dari variabel lingkungan
         const apiUrl = process.env.VUE_APP_SERVICE_API;
-        
-        // Membuat permintaan GET menggunakan axios
-        const response = await axios.get(`${apiUrl}/v1/register`); // Gantilah `/endpoint` dengan endpoint yang sesuai
-        
-        this.data = response.data; // Menyimpan data yang didapat dari API
+
+        // Pastikan apiUrl tidak undefined sebelum melakukan request
+        if (!apiUrl) {
+          this.errorMessage = 'API URL is not defined in environment variables.';
+          console.error('API URL (VUE_APP_SERVICE_API) is not defined.');
+          this.isLoading = false;
+          return; // Hentikan eksekusi jika apiUrl tidak ada
+        }
+
+        const response = await axios.get(`${apiUrl}/v1/register`);
+
+        this.data = response.data;
       } catch (error) {
-        this.errorMessage = 'Terjadi kesalahan saat mengambil data dari API'; // Menampilkan error
+        // --- PERBAIKAN UNTUK SONARQUBE: LOG ERROR ---
+        console.error('Error fetching data from API:', error);
+        // Anda bisa memberikan pesan error yang lebih spesifik jika 'error.response' ada
+        if (error.response) {
+          this.errorMessage = `Error: ${error.response.status} - ${error.response.data.message || 'Server error'}`;
+        } else if (error.request) {
+          this.errorMessage = 'Network error: No response received from server.';
+        } else {
+          this.errorMessage = 'An unexpected error occurred while fetching data from the API.';
+        }
       } finally {
-        this.isLoading = false; // Menandakan proses selesai
+        this.isLoading = false;
       }
     },
   },

@@ -4,7 +4,7 @@
                  hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
       <div class="flex justify-start mb-4">
-        <button @click="goBack" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
+        <button @click="goBack" data-test="go-back-button" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
           <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -35,6 +35,9 @@
       <div v-if="showRecaptchaContainer" id="recaptcha-container" class="mt-4 flex justify-center"></div>
 
       <form v-if="!isRecaptchaLoading" class="space-y-6" @submit.prevent="handleOtpVerification">
+        <p class="text-center text-gray-800 font-medium text-base">
+        OTP Code (6 Digits)
+        </p>
         <div class="flex justify-center space-x-2">
           <input
             v-for="(digit, index) in otpDigits"
@@ -47,7 +50,7 @@
             class="w-12 h-12 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg"
             @input="onOtpInput(index)"
             @keydown.backspace="onOtpBackspace(index, $event)"
-            ref="otpInputs" />
+            :ref="(el) => otpInputs[index] = el" />
         </div>
 
         <div>
@@ -72,7 +75,7 @@
 
       <p v-if="!isRecaptchaLoading" class="mt-6 text-center text-sm text-gray-500">
         Didn't receive code?
-        <button @click="resendOtp" :disabled="isResending || isLoading" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+        <button @click="resendOtp" data-test="resend-otp-button" :disabled="isResending || isLoading" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
           Resend OTP
         </button>
       </p>
@@ -97,29 +100,50 @@ export default {
     const errorMessage = ref('');
     const successMessage = ref('');
     const phoneNumberDisplay = ref('');
-    const isRecaptchaLoading = ref(true); // Controls OTP input/button visibility initially
-    const showRecaptchaContainer = ref(true); // Controls reCAPTCHA container visibility
+    const isRecaptchaLoading = ref(true); 
+    const showRecaptchaContainer = ref(true); 
 
     const otpCode = computed(() => otpDigits.value.join(''));
-    const otpInputs = ref([]); // Ref to access OTP input elements
+    const otpInputs = ref([]);
 
     const onOtpInput = (index) => {
-      const val = otpDigits.value[index];
-      if (val.length > 1) otpDigits.value[index] = val.slice(-1);
-      if (val && index < 5) focusNextInput(index + 1);
+      let val = otpDigits.value[index];
+      val = val.replace(/\D/g, '');
+      if (val.length > 1) {
+          val = val.charAt(0);
+      }
+      otpDigits.value[index] = val; 
+      
+      if (val && index < otpDigits.value.length - 1) {
+        nextTick(() => {
+          if (otpInputs.value[index + 1]) {
+            otpInputs.value[index + 1].focus();
+          }
+        });
+      }
     };
 
     const onOtpBackspace = (index, event) => {
-      if (event.key === 'Backspace' && !otpDigits.value[index] && index > 0) {
-        focusNextInput(index - 1);
+      if (event.key === 'Backspace') {
+        if (!otpDigits.value[index] && index > 0) {
+          otpDigits.value[index - 1] = '';
+          nextTick(() => {
+            if (otpInputs.value[index - 1]) {
+              otpInputs.value[index - 1].focus();
+            }
+          });
+        } else if (otpDigits.value[index]) {
+          otpDigits.value[index] = '';
+        }
       }
     };
 
-    const focusNextInput = (index) => {
-      // Use otpInputs ref for more robust focus management
-      if (otpInputs.value[index]) {
-        otpInputs.value[index].focus();
-      }
+    const focusFirstInput = () => {
+        nextTick(() => {
+            if (otpInputs.value[0]) {
+                otpInputs.value[0].focus();
+            }
+        });
     };
 
     const goBack = () => {
@@ -129,48 +153,46 @@ export default {
     const initializeRecaptcha = async () => {
       errorMessage.value = '';
       successMessage.value = '';
-      isRecaptchaLoading.value = true; // Sembunyikan OTP input/button
-      showRecaptchaContainer.value = true; // Tampilkan reCAPTCHA container
+      isRecaptchaLoading.value = true; 
+      showRecaptchaContainer.value = true; 
+      otpDigits.value = ['', '', '', '', '', '']; 
 
-      // Clear the reCAPTCHA container to ensure a fresh render
       const recaptchaEl = document.getElementById('recaptcha-container');
       if (recaptchaEl) {
-        recaptchaEl.innerHTML = ''; // Penting: Membersihkan container
+        recaptchaEl.innerHTML = ''; 
       }
 
-      // Pastikan DOM sudah diperbarui sebelum Firebase mencoba merender reCAPTCHA
-      await nextTick();
+      await nextTick(); 
 
-      const result = await authStore.sendOtpFirebase('recaptcha-container');
-
-      if (result.success) {
-        successMessage.value = result.message;
-        isRecaptchaLoading.value = false; 
-        showRecaptchaContainer.value = false; 
-        // Clear OTP input fields for new OTP
-        otpDigits.value = ['', '', '', '', '', ''];
-        await nextTick(); // Ensure inputs are rendered before focusing
-        if (otpInputs.value[0]) {
-          otpInputs.value[0].focus();
-        }
-      } else {
-        errorMessage.value = result.message;
-        isRecaptchaLoading.value = false; 
-        showRecaptchaContainer.value = false; 
-      }
-    };
-
-    onMounted(async () => {
       const phoneNumber = authStore.currentPhoneNumber;
       if (!phoneNumber) {
         errorMessage.value = 'Phone number not found. Please log in again.';
         router.push('/login');
+        isRecaptchaLoading.value = false;
+        showRecaptchaContainer.value = false;
         return;
       }
-      phoneNumberDisplay.value = phoneNumber;
 
-      await initializeRecaptcha();
-    });
+      try {
+        const result = await authStore.sendOtpFirebase('recaptcha-container');
+
+        if (result.success) {
+          successMessage.value = result.message;
+          isRecaptchaLoading.value = false; 
+          showRecaptchaContainer.value = false; 
+          focusFirstInput(); 
+        } else {
+          errorMessage.value = result.message || 'Failed to send OTP.';
+          isRecaptchaLoading.value = false; 
+          showRecaptchaContainer.value = true; 
+        }
+      } catch (error) {
+        console.error("Error during reCAPTCHA initialization or sending OTP:", error);
+        errorMessage.value = 'Failed to initialize reCAPTCHA or send OTP. Please try again.';
+        isRecaptchaLoading.value = false;
+        showRecaptchaContainer.value = true; 
+      }
+    };
 
     const handleOtpVerification = async () => {
       isLoading.value = true;
@@ -190,12 +212,12 @@ export default {
           successMessage.value = result.message;
           setTimeout(() => {
             router.push('/dashboard');
-          }, 1500);
+          }, 1500); 
         } else {
-          errorMessage.value = result.message;
-          // Tidak ada perubahan di sini, errorMessage akan ditampilkan di atas form
+          errorMessage.value = result.message || 'OTP verification failed.';
         }
       } catch (error) {
+        console.error("Error during OTP verification:", error);
         errorMessage.value = 'An unexpected error occurred during OTP verification.';
       } finally {
         isLoading.value = false;
@@ -203,21 +225,29 @@ export default {
     };
 
     const resendOtp = async () => {
-      const phoneNumber = authStore.currentPhoneNumber;
-      if (!phoneNumber) {
-        errorMessage.value = 'Phone number not found for resending OTP.';
-        return;
-      }
-
       isResending.value = true;
-      isLoading.value = true; // Disable verify button during resend process
+      isLoading.value = true; 
 
-      // Re-initialize reCAPTCHA, which will hide OTP inputs, then show them again
-      await initializeRecaptcha();
-
+      await initializeRecaptcha(); 
+      
       isResending.value = false;
       isLoading.value = false;
     };
+
+    onMounted(async () => {
+      const phoneNumber = authStore.currentPhoneNumber;
+      if (!phoneNumber) {
+        errorMessage.value = 'Phone number not found. Please log in again.';
+        router.push('/login');
+        return;
+      }
+      phoneNumberDisplay.value = phoneNumber;
+
+      await nextTick();
+      otpInputs.value = otpInputs.value.filter(Boolean);
+
+      await initializeRecaptcha();
+    });
 
     return {
       otpDigits,
@@ -233,15 +263,8 @@ export default {
       onOtpInput,
       onOtpBackspace,
       goBack,
-      otpInputs // Make otpInputs ref available in template
+      otpInputs
     };
   },
 };
 </script>
-
-<style scoped>
-/* Tambahkan atau sesuaikan gaya CSS sesuai kebutuhan */
-.error {
-  color: red;
-}
-</style>

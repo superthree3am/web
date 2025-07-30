@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'; // Import computed
+import { ref, computed } from 'vue';
 
 export default {
   name: 'BaseInput',
@@ -47,7 +47,7 @@ export default {
       type: String,
       default: '',
     },
-    type: { // This type will now determine if it's a "password" type initially
+    type: {
       type: String,
       default: 'text',
     },
@@ -83,17 +83,15 @@ export default {
       type: String,
       default: '',
     },
-    isPasswordToggle: { // NEW PROP: To enable password visibility toggle
+    isPasswordToggle: {
       type: Boolean,
       default: false,
     },
   },
   emits: ['update:modelValue'],
   setup(props) {
-    // Internal state for the input type when toggle is enabled
     const inputType = ref(props.type);
 
-    // Computed property to determine the actual input type to use
     const computedInputType = computed(() => {
       return props.isPasswordToggle ? inputType.value : props.type;
     });
@@ -110,7 +108,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-/* Style tambahan jika diperlukan, tapi Tailwind sudah cukup */
-</style>

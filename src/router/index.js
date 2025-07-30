@@ -1,28 +1,57 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import LoginPage from '@/views/Login/LoginPage.vue';  
+import LoginPage from '@/views/Login/LoginPage.vue';
 import RegisterPage from '@/views/Register/index.vue';
 import OtpPage from '@/views/Verifikasioke/OtpVerification.vue';
 import Dashboard from '@/views/Dashboard/index.vue';
-import ForgotPassword from '@/views/ForgotPassword/index.vue';  // Import ForgotPassword
+
 
 const routes = [
-  { path: '/', name: 'login', component: LoginPage },
-  { path: '/login', name: 'login-page', component: LoginPage },
-  { path: '/register', name: 'register', component: RegisterPage },
+  { 
+    path: '/', 
+    name: 'login', 
+    component: LoginPage,
+    meta: { title: 'Login' } 
+  },
+  { 
+    path: '/login', 
+    name: 'login-page', 
+    component: LoginPage,
+    meta: { title: 'Login' } 
+  },
+  { 
+    path: '/register', 
+    name: 'register', 
+    component: RegisterPage,
+    meta: { title: 'Sign up' } 
+  },
   {
-    path: '/otp', // Path sederhana, tidak ada parameter di URL
+    path: '/otp', 
     name: 'OTP',
     component: OtpPage,
-    // props: true dihapus karena kita tidak lagi meneruskan data via props dari params
-    meta: { requiresPhoneAuthInitiation: true }
+    meta: { 
+      requiresPhoneAuthInitiation: true,
+      title: 'OTP Verification' // 
+    }
   },
-  { path: '/dashboard', name: 'dashboard', component: Dashboard },
-  { path: '/forgot-password', name: 'forgot-password', component: ForgotPassword },  // Rute Forgot Password
+  { 
+    path: '/dashboard', 
+    name: 'dashboard', 
+    component: Dashboard,
+    meta: { title: 'Dashboard' } 
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+
+const DEFAULT_TITLE = '3 A.M'; 
+
+router.beforeEach((to, from, next) => {
+  document.title = to.meta.title || DEFAULT_TITLE;
+  next();
 });
 
 export default router;
