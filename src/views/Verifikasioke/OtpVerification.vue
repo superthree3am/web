@@ -100,25 +100,23 @@ export default {
     const errorMessage = ref('');
     const successMessage = ref('');
     const phoneNumberDisplay = ref('');
-    const isRecaptchaLoading = ref(true); 
-    const showRecaptchaContainer = ref(true); 
-
+    const isRecaptchaLoading = ref(true);
+    const showRecaptchaContainer = ref(true);
     const otpCode = computed(() => otpDigits.value.join(''));
     const otpInputs = ref([]);
+    const isBlocked = ref(false); 
 
     const onOtpInput = (index) => {
       let val = otpDigits.value[index];
       val = val.replace(/\D/g, '');
       if (val.length > 1) {
-          val = val.charAt(0);
+        val = val.charAt(0);
       }
-      otpDigits.value[index] = val; 
-      
+      otpDigits.value[index] = val;
+
       if (val && index < otpDigits.value.length - 1) {
         nextTick(() => {
-          if (otpInputs.value[index + 1]) {
-            otpInputs.value[index + 1].focus();
-          }
+          otpInputs.value[index + 1]?.focus();
         });
       }
     };
@@ -127,42 +125,25 @@ export default {
       if (event.key === 'Backspace') {
         if (!otpDigits.value[index] && index > 0) {
           otpDigits.value[index - 1] = '';
-          nextTick(() => {
-            if (otpInputs.value[index - 1]) {
-              otpInputs.value[index - 1].focus();
-            }
-          });
-        } else if (otpDigits.value[index]) {
+          nextTick(() => otpInputs.value[index - 1]?.focus());
+        } else {
           otpDigits.value[index] = '';
         }
       }
     };
 
-    const focusFirstInput = () => {
-        nextTick(() => {
-            if (otpInputs.value[0]) {
-                otpInputs.value[0].focus();
-            }
-        });
-    };
-
-    const goBack = () => {
-      router.push('/login');
-    };
+    const goBack = () => router.push('/login');
 
     const initializeRecaptcha = async () => {
       errorMessage.value = '';
       successMessage.value = '';
-      isRecaptchaLoading.value = true; 
-      showRecaptchaContainer.value = true; 
-      otpDigits.value = ['', '', '', '', '', '']; 
+      isRecaptchaLoading.value = true;
+      showRecaptchaContainer.value = true;
+      otpDigits.value = ['', '', '', '', '', ''];
 
       const recaptchaEl = document.getElementById('recaptcha-container');
-      if (recaptchaEl) {
-        recaptchaEl.innerHTML = ''; 
-      }
-
-      await nextTick(); 
+      if (recaptchaEl) recaptchaEl.innerHTML = '';
+      await nextTick();
 
       const phoneNumber = authStore.currentPhoneNumber;
       if (!phoneNumber) {
@@ -178,33 +159,58 @@ export default {
 
         if (result.success) {
           successMessage.value = result.message;
-          isRecaptchaLoading.value = false; 
-          showRecaptchaContainer.value = false; 
-          focusFirstInput(); 
+          isRecaptchaLoading.value = false;
+          showRecaptchaContainer.value = false;
+          nextTick(() => otpInputs.value[0]?.focus());
         } else {
           errorMessage.value = result.message || 'Failed to send OTP.';
-          isRecaptchaLoading.value = false; 
-          showRecaptchaContainer.value = true; 
+          isRecaptchaLoading.value = false;
+          showRecaptchaContainer.value = true;
 
+          
           const msg = result.message?.toLowerCase() || '';
-          if (msg.includes('Too many OTP requests. Please try again later') || msg.includes('requests')) {
+          if (msg.includes('too many') || msg.includes('requests')) {
             isResending.value = true;
           }
-
+          if ((result.message || '').toLowerCase().includes('too many') || result.code === 'auth/too-many-requests') {
+            const blockDuration = 60 * 1000; // 1 menit blokir
+            localStorage.setItem('otp_blocked_until', Date.now() + blockDuration);
+            isBlocked.value = true;
+          }
         }
+        
       } catch (error) {
-        console.error("Error during reCAPTCHA initialization or sending OTP:", error);
-        errorMessage.value = 'Failed to initialize reCAPTCHA or send OTP. Please try again.';
+        console.error("OTP error:", error);
+        errorMessage.value = 'Failed to send OTP. Please try again later.';
         isRecaptchaLoading.value = false;
-        showRecaptchaContainer.value = true; 
+        showRecaptchaContainer.value = true;
 
+        
         if (
-          error?.message?.toLowerCase().includes('too many') ||
+          (error?.message || '').toLowerCase().includes('too many') ||
           error?.code === 'auth/too-many-requests'
         ) {
-          isResending.value = true;
+          const blockDuration = 60 * 1000; // 1 menit
+          localStorage.setItem('otp_blocked_until', Date.now() + blockDuration);
+          isBlocked.value = true;
         }
       }
+    };
+
+    const resendOtp = async () => {
+      
+      const blockedUntil = localStorage.getItem('otp_blocked_until');
+      if (blockedUntil && Date.now() < parseInt(blockedUntil)) {
+        errorMessage.value = 'Too many OTP requests. Please try again later.';
+        isBlocked.value = true;
+        return;
+      }
+
+      isResending.value = true;
+      isLoading.value = true;
+      await initializeRecaptcha();
+      isResending.value = false;
+      isLoading.value = false;
     };
 
     const handleOtpVerification = async () => {
@@ -213,7 +219,7 @@ export default {
       successMessage.value = '';
 
       if (otpCode.value.length !== 6) {
-        errorMessage.value = 'OTP must be 6 digits long.';
+        errorMessage.value = 'OTP must be 6 digits.';
         isLoading.value = false;
         return;
       }
@@ -223,31 +229,19 @@ export default {
 
         if (result.success) {
           successMessage.value = result.message;
-          setTimeout(() => {
-            router.push('/dashboard');
-          }, 1500); 
+          setTimeout(() => router.push('/dashboard'), 1500);
         } else {
           errorMessage.value = result.message || 'OTP verification failed.';
         }
       } catch (error) {
-        console.error("Error during OTP verification:", error);
+        console.error("OTP verify error:", error);
         errorMessage.value = 'An unexpected error occurred during OTP verification.';
       } finally {
         isLoading.value = false;
       }
     };
 
-    const resendOtp = async () => {
-      isResending.value = true;
-      isLoading.value = true; 
-
-      await initializeRecaptcha(); 
-      
-      isResending.value = false;
-      isLoading.value = false;
-    };
-
-    onMounted(async () => {
+    onMounted(() => {
       const phoneNumber = authStore.currentPhoneNumber;
       if (!phoneNumber) {
         errorMessage.value = 'Phone number not found. Please log in again.';
@@ -256,16 +250,20 @@ export default {
       }
       phoneNumberDisplay.value = phoneNumber;
 
-      await nextTick();
-      otpInputs.value = otpInputs.value.filter(Boolean);
+      const blockedUntil = localStorage.getItem('otp_blocked_until');
+      if (blockedUntil && Date.now() < parseInt(blockedUntil)) {
+        errorMessage.value = 'Too many OTP requests. Please try again later.';
+        isBlocked.value = true; 
+      }
 
-      await initializeRecaptcha();
+      initializeRecaptcha();
     });
 
     return {
       otpDigits,
       isLoading,
       isResending,
+      isBlocked, // ✅ RETURN UNTUK V-IF / DISABLED BINDING
       errorMessage,
       successMessage,
       phoneNumberDisplay,
@@ -278,6 +276,6 @@ export default {
       goBack,
       otpInputs
     };
-  },
+  }
 };
 </script>

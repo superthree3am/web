@@ -6,6 +6,7 @@ import { createTestingPinia } from '@pinia/testing';
 import { createRouter, createWebHistory } from 'vue-router';
 import { vi } from 'vitest';
 
+// 1. Setup Vue Router for testing
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -15,6 +16,7 @@ const router = createRouter({
   ],
 });
 
+// 2. Mocking Pinia store functions and getter
 let mockVerifyOtpAndLoginWithFirebase = vi.fn();
 let mockSendOtpFirebase = vi.fn();
 let mockCurrentPhoneNumber = vi.fn();
@@ -29,6 +31,7 @@ vi.mock('@/stores/auth', () => ({
   }),
 }));
 
+// 3. Use fake timers to control timeouts (e.g., for navigation delays)
 vi.useFakeTimers();
 
 describe('OtpVerification.vue', () => {
@@ -41,6 +44,7 @@ describe('OtpVerification.vue', () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     vi.useFakeTimers();
+    localStorage.clear();
 
     mockVerifyOtpAndLoginWithFirebase.mockResolvedValue({ success: true, message: 'OTP Verified' });
     mockSendOtpFirebase.mockResolvedValue({ success: true, message: 'OTP sent successfully.' });
@@ -88,7 +92,7 @@ describe('OtpVerification.vue', () => {
     await wrapper.find('form').trigger('submit.prevent');
     await flushPromises();
 
-    expect(wrapper.vm.errorMessage).toBe('OTP must be 6 digits long.');
+    expect(wrapper.vm.errorMessage).toBe('OTP must be 6 digits.');
     expect(mockVerifyOtpAndLoginWithFirebase).not.toHaveBeenCalled();
     expect(wrapper.find('.bg-red-100').exists()).toBe(true);
   });
@@ -421,7 +425,6 @@ describe('OtpVerification.vue', () => {
     expect(focusSpy0).toHaveBeenCalledTimes(1);
     focusSpy0.mockRestore();
 
-    // Scenario 3: Backspace on the first input when it's empty
     wrapper.vm.otpDigits = ['', '', '', '', '', ''];
     await wrapper.vm.$nextTick();
     inputs[0].element.focus();
@@ -437,5 +440,73 @@ describe('OtpVerification.vue', () => {
     expect(focusSpyAny).not.toHaveBeenCalled();
     focusSpyAny.mockRestore();
   });
+
+  it('shows error if resend OTP fails due to too many requests', async () => {
+    mockSendOtpFirebase.mockClear();
+
+    mockSendOtpFirebase.mockResolvedValueOnce({
+      success: true,
+      message: 'Initial OTP sent successfully.',
+    });
+
+    const wrapper = mount(OtpVerification, {
+      global: {
+        plugins: [createTestingPinia(), router],
+      },
+    });
+
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(mockSendOtpFirebase).toHaveBeenCalledTimes(1);
+    expect(wrapper.vm.successMessage).toBe('Initial OTP sent successfully.');
+
+    mockSendOtpFirebase.mockResolvedValueOnce({
+      success: false,
+      message: 'Too many OTP requests. Please try again later.',
+    });
+
+    mockSendOtpFirebase.mockClear();
+    
+    const resendButton = wrapper.find('[data-test="resend-otp-button"]');
+    await resendButton.trigger('click');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(mockSendOtpFirebase).toHaveBeenCalledTimes(1);
+    expect(wrapper.vm.errorMessage).toBe('Too many OTP requests. Please try again later.');
+    expect(wrapper.vm.successMessage).toBe('');
+    expect(wrapper.vm.isLoading).toBe(false);
+    expect(wrapper.vm.isResending).toBe(false);
+  });
   
+  it('blocks resend OTP button and sets localStorage on too many requests error', async () => {
+    mockSendOtpFirebase.mockResolvedValueOnce({
+      success: false,
+      message: 'We have blocked all requests from this device due to unusual activity.',
+      code: 'auth/too-many-requests'
+    });
+
+    const wrapper = mount(OtpVerification, {
+      global: {
+        plugins: [createTestingPinia(), router],
+      },
+    });
+
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+    
+    expect(mockSendOtpFirebase).toHaveBeenCalledTimes(1);
+    expect(wrapper.vm.errorMessage).toContain('We have blocked all requests');
+    
+    expect(wrapper.vm.isBlocked).toBe(true);
+    
+    const blockedUntil = localStorage.getItem('otp_blocked_until');
+    expect(blockedUntil).not.toBeNull();
+    const blockDuration = 60 * 1000;
+    expect(parseInt(blockedUntil)).toBeGreaterThan(Date.now() - 1000); 
+    expect(parseInt(blockedUntil)).toBeLessThan(Date.now() + blockDuration + 1000);
+  });
+  
+ 
 });

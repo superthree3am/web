@@ -135,6 +135,13 @@ export default {
       isLoading.value = true;
 
       try {
+      const blockedUntil = localStorage.getItem('otp_blocked_until');
+      if (blockedUntil && Date.now() < parseInt(blockedUntil)) {
+        errorMessage.value = 'Too many OTP requests. Please try again later.';
+        isLoading.value = false;
+        return;
+      }
+
         const result = await authStore.login({
           username: username.value,
           password: password.value
