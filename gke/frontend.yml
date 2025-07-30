@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: frontend-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: frontend-dev
   template:
     metadata:
       labels:
-        app: frontend
+        app: frontend-dev
     spec:
       containers:
-        - name: frontend
+        - name: frontend-dev
           image: asia-southeast2-docker.pkg.dev/am-finalproject/frontend-repo/web:latest
           ports:
             - containerPort: 8080
@@ -21,12 +21,28 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: frontend-dev
 spec:
   selector:
-    app: frontend
+    app: frontend-dev
   ports:
     - protocol: TCP
-      port: 8080 # <- yang diakses publik, dan external IP-nya listen di port 8080
-      targetPort: 8080 # <- di dalam pod
-  type: LoadBalancer
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: frontend-dev
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`web.42n.fun`)
+      kind: Rule
+      services:
+        - name: frontend-dev
+          port: 8080
