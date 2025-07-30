@@ -437,4 +437,5 @@ describe('OtpVerification.vue', () => {
     expect(focusSpyAny).not.toHaveBeenCalled();
     focusSpyAny.mockRestore();
   });
+  
 });
