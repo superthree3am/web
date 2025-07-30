@@ -185,12 +185,21 @@ export default {
           errorMessage.value = result.message || 'Failed to send OTP.';
           isRecaptchaLoading.value = false; 
           showRecaptchaContainer.value = true; 
+
+          if (result.message && result.message.toLowerCase().includes('Too many OTP requests')) {
+        isResending.value = true;
+         }
+
         }
       } catch (error) {
         console.error("Error during reCAPTCHA initialization or sending OTP:", error);
         errorMessage.value = 'Failed to initialize reCAPTCHA or send OTP. Please try again.';
         isRecaptchaLoading.value = false;
         showRecaptchaContainer.value = true; 
+
+         if (error?.message?.toLowerCase().includes('too many requests')) {
+      isResending.value = true;
+      }
       }
     };
 
