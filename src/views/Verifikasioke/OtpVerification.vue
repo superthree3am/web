@@ -186,9 +186,10 @@ export default {
           isRecaptchaLoading.value = false; 
           showRecaptchaContainer.value = true; 
 
-          if (result.message && result.message.toLowerCase().includes('Too many OTP requests')) {
-        isResending.value = true;
-         }
+          const msg = result.message?.toLowerCase() || '';
+          if (msg.includes('Too many OTP requests. Please try again later') || msg.includes('requests')) {
+            isResending.value = true;
+          }
 
         }
       } catch (error) {
@@ -197,9 +198,12 @@ export default {
         isRecaptchaLoading.value = false;
         showRecaptchaContainer.value = true; 
 
-         if (error?.message?.toLowerCase().includes('too many requests')) {
-      isResending.value = true;
-      }
+        if (
+          error?.message?.toLowerCase().includes('too many') ||
+          error?.code === 'auth/too-many-requests'
+        ) {
+          isResending.value = true;
+        }
       }
     };
 
