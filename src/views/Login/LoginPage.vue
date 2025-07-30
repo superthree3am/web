@@ -190,4 +190,3 @@ export default {
   animation: fade-in-down 0.5s ease-out forwards;
 }
 </style>
-//
