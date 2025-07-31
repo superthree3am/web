@@ -1,14 +1,25 @@
+<<<<<<< HEAD
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, signOut } from 'firebase/auth';
+=======
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+} from "firebase/auth";
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
 
-export const useAuthStore = defineStore('auth', () => {
+export const useAuthStore = defineStore("auth", () => {
   const user = ref(null);
   const token = ref(null);
   const isAuthenticated = ref(false);
   const isLoading = ref(false);
-  const baseURL = process.env.VUE_APP_SERVICE_API || 'http://localhost:8080';
+  const baseURL = process.env.VUE_APP_SERVICE_API;
 
   const firebaseConfig = {
     apiKey: process.env.VUE_APP_FIREBASE_API_KEY,
@@ -17,7 +28,7 @@ export const useAuthStore = defineStore('auth', () => {
     storageBucket: process.env.VUE_APP_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.VUE_APP_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.VUE_APP_FIREBASE_APP_ID,
-    measurementId: process.env.VUE_APP_FIREBASE_MEASUREMENT_ID
+    measurementId: process.env.VUE_APP_FIREBASE_MEASUREMENT_ID,
   };
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
@@ -29,9 +40,9 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       const response = await fetch(`${baseURL}/api/v1/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           username: credentials.username,
@@ -48,70 +59,101 @@ export const useAuthStore = defineStore('auth', () => {
           return {
             success: true,
             mfaRequired: true,
-            message: data.message || 'OTP verification initiated.',
+            message: data.message || "OTP verification initiated.",
             username: data.username,
           };
         } else if (data.token) {
           token.value = data.token;
           user.value = data.user || { username: data.username };
           isAuthenticated.value = true;
+<<<<<<< HEAD
           localStorage.setItem('auth_token', data.token);
           localStorage.setItem('user_data', JSON.stringify(user.value));
+=======
+          localStorage.setItem("auth_token", data.token);
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
           return {
             success: true,
             mfaRequired: false,
-            message: data.message || 'Login successful.',
+            message: data.message || "Login successful.",
           };
         } else {
-          return { success: false, message: data.message || 'Invalid server response.' };
+          return {
+            success: false,
+            message: data.message || "Invalid server response.",
+          };
         }
       } else {
-        return { success: false, message: data.message || 'Login failed.' };
+        return { success: false, message: data.message || "Login failed." };
       }
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, message: 'Network error or server unavailable.' };
+      console.error("Login error:", error);
+      return {
+        success: false,
+        message: "Network error or server unavailable.",
+      };
     } finally {
       isLoading.value = false;
     }
   };
 
-  const sendOtpFirebase = async (recaptchaContainerId = 'recaptcha-container') => {
+  const sendOtpFirebase = async (
+    recaptchaContainerId = "recaptcha-container"
+  ) => {
     isLoading.value = true;
     if (!currentPhoneNumber.value) {
       isLoading.value = false;
-      return { success: false, message: 'Phone number not available to send OTP.' };
+      return {
+        success: false,
+        message: "Phone number not available to send OTP.",
+      };
     }
     try {
-      window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, recaptchaContainerId, {
-        'size': 'normal',
-        'expired-callback': () => { /* Optional expired handler */ }
-      });
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        firebaseAuth,
+        recaptchaContainerId,
+        {
+          size: "normal",
+          "expired-callback": () => {
+            /* Optional expired handler */
+          },
+        }
+      );
       await window.recaptchaVerifier.render();
 
+<<<<<<< HEAD
       confirmationResult.value = await signInWithPhoneNumber(firebaseAuth, currentPhoneNumber.value, window.recaptchaVerifier);
       return { success: true, message: 'OTP sent!' };
+=======
+      confirmationResult = await signInWithPhoneNumber(
+        firebaseAuth,
+        currentPhoneNumber.value,
+        window.recaptchaVerifier
+      );
+      return { success: true, message: "OTP sent!" };
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
     } catch (error) {
       console.error("Error sending OTP via Firebase:", error);
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
       }
-      let errorMessage = error.message || 'Failed to send OTP via Firebase.';
+      let errorMessage = error.message || "Failed to send OTP via Firebase.";
       switch (error.code) {
-        case 'auth/invalid-phone-number':
-          errorMessage = 'Invalid phone number format.';
+        case "auth/invalid-phone-number":
+          errorMessage = "Invalid phone number format.";
           break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Too many OTP requests. Please try again later.';
+        case "auth/too-many-requests":
+          errorMessage = "Too many OTP requests. Please try again later.";
           break;
-        case 'auth/argument-error':
-          errorMessage = 'Internal error during OTP request. Please try again.';
+        case "auth/argument-error":
+          errorMessage = "Internal error during OTP request. Please try again.";
           break;
-        case 'auth/captcha-check-failed':
-          errorMessage = 'reCAPTCHA challenge failed. Please try again.';
+        case "auth/captcha-check-failed":
+          errorMessage = "reCAPTCHA challenge failed. Please try again.";
           break;
-        case 'auth/web-storage-unsupported':
-          errorMessage = 'Browser storage not supported. Use a different browser or enable cookies.';
+        case "auth/web-storage-unsupported":
+          errorMessage =
+            "Browser storage not supported. Use a different browser or enable cookies.";
           break;
       }
       confirmationResult.value = null;
@@ -125,16 +167,19 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     if (!confirmationResult.value) {
       isLoading.value = false;
-      return { success: false, message: 'OTP flow not initiated. Please try again.' };
+      return {
+        success: false,
+        message: "OTP flow not initiated. Please try again.",
+      };
     }
     try {
       const userCredential = await confirmationResult.value.confirm(otpCode);
       const firebaseIdToken = await userCredential.user.getIdToken();
 
       const response = await fetch(`${baseURL}/api/v1/verify`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ idToken: firebaseIdToken }),
       });
@@ -145,6 +190,7 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = data.token;
         user.value = data.user || { username: data.username };
         isAuthenticated.value = true;
+<<<<<<< HEAD
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('user_data', JSON.stringify(user.value));
         if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
@@ -160,17 +206,31 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('auth_token'); // Ditambahkan
         localStorage.removeItem('user_data');   // Ditambahkan
         return { success: false, message: data.message || 'Backend verification failed.' };
+=======
+        localStorage.setItem("auth_token", data.token);
+        if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+        currentPhoneNumber.value = null;
+        return {
+          success: true,
+          message: data.message || "Login successful via OTP.",
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || "Backend verification failed.",
+        };
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
       }
     } catch (error) {
       console.error("OTP verification error:", error);
       if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
-      let errorMessage = error.message || 'OTP verification failed.';
-      if (error.code === 'auth/invalid-verification-code') {
-        errorMessage = 'Incorrect OTP code!';
-      } else if (error.code === 'auth/code-expired') {
-        errorMessage = 'OTP expired. Please resend.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many attempts. Try again later.';
+      let errorMessage = error.message || "OTP verification failed.";
+      if (error.code === "auth/invalid-verification-code") {
+        errorMessage = "Incorrect OTP code!";
+      } else if (error.code === "auth/code-expired") {
+        errorMessage = "OTP expired. Please resend.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Try again later.";
       }
       // Clear state on Firebase verification error
       currentPhoneNumber.value = null;
@@ -188,21 +248,21 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       if (!token.value) {
-        const storedToken = localStorage.getItem('auth_token');
+        const storedToken = localStorage.getItem("auth_token");
         if (storedToken) {
           token.value = storedToken;
           isAuthenticated.value = true;
         } else {
           isLoading.value = false;
-          return { success: false, message: 'No authentication token found.' };
+          return { success: false, message: "No authentication token found." };
         }
       }
 
       const response = await fetch(`${baseURL}/api/v1/profile`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${token.value}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.value}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -210,18 +270,35 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (response.ok) {
         user.value = { ...user.value, ...data };
+<<<<<<< HEAD
         localStorage.setItem('user_data', JSON.stringify(user.value));
         return { success: true, profile: data, message: 'Profile fetched successfully.' };
+=======
+        return {
+          success: true,
+          profile: data,
+          message: "Profile fetched successfully.",
+        };
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
       } else {
         if (response.status === 401) {
           logout();
-          return { success: false, message: data.message || 'Unauthorized: Please log in again.' };
+          return {
+            success: false,
+            message: data.message || "Unauthorized: Please log in again.",
+          };
         }
-        return { success: false, message: data.message || 'Failed to fetch profile.' };
+        return {
+          success: false,
+          message: data.message || "Failed to fetch profile.",
+        };
       }
     } catch (error) {
-      console.error('Get profile error:', error);
-      return { success: false, message: 'Network error or server unavailable.' };
+      console.error("Get profile error:", error);
+      return {
+        success: false,
+        message: "Network error or server unavailable.",
+      };
     } finally {
       isLoading.value = false;
     }
@@ -231,17 +308,17 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       const response = await fetch(`${baseURL}/api/v1/register`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           fullName: userData.fullName,
           email: userData.email,
           username: userData.username,
           phone: userData.phone,
-          password: userData.password
-        })
+          password: userData.password,
+        }),
       });
 
       const data = await response.json();
@@ -249,19 +326,19 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.ok) {
         return {
           success: true,
-          message: data.message || 'Registration successful',
+          message: data.message || "Registration successful",
         };
       } else {
         return {
           success: false,
-          message: data.message || 'Registration failed',
+          message: data.message || "Registration failed",
         };
       }
     } catch (error) {
-      console.error('Register error:', error);
+      console.error("Register error:", error);
       return {
         success: false,
-        message: 'An error occurred during registration. Please try again.',
+        message: "An error occurred during registration. Please try again.",
         error: error.message,
       };
     } finally {
@@ -275,21 +352,29 @@ export const useAuthStore = defineStore('auth', () => {
         await signOut(firebaseAuth);
       }
       await fetch(`${baseURL}/logout`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.value}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token.value}`,
         },
+<<<<<<< HEAD
         credentials: 'include',
       });
     } catch (error) {
       console.error('Logout error:', error);
+=======
+        credentials: "include", // jika backend pakai cookie
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
     }
 
     user.value = null;
     token.value = null;
     isAuthenticated.value = false;
     currentPhoneNumber.value = null;
+<<<<<<< HEAD
     confirmationResult.value = null;
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_data');
@@ -301,6 +386,13 @@ export const useAuthStore = defineStore('auth', () => {
     const storedUserData = localStorage.getItem('user_data');
     const storedPhoneNumber = localStorage.getItem('current_phone_number');
 
+=======
+    localStorage.removeItem("auth_token");
+  };
+
+  const checkAuth = () => {
+    const storedToken = localStorage.getItem("auth_token");
+>>>>>>> cf1696a2a339b125cc7fd5c3a40a9f19dbf2c93f
     if (storedToken) {
       token.value = storedToken;
       isAuthenticated.value = true;
