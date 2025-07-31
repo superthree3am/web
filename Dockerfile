@@ -1,26 +1,42 @@
-# Build Stage
+# Build Stage 
 FROM node:20-alpine AS build-stage
 WORKDIR /app
-
 COPY package*.json ./
 RUN yarn install --frozen-lockfile
 COPY . .
 
-# Tambahkan ARG agar bisa diisi saat docker build
+# Inject variable dari build args
 ARG VUE_APP_SERVICE_API
 ENV VUE_APP_SERVICE_API=$VUE_APP_SERVICE_API
+ARG VUE_APP_FIREBASE_API_KEY
+ENV VUE_APP_FIREBASE_API_KEY=$VUE_APP_FIREBASE_API_KEY
+ARG VUE_APP_FIREBASE_AUTH_DOMAIN
+ENV VUE_APP_FIREBASE_AUTH_DOMAIN=$VUE_APP_FIREBASE_AUTH_DOMAIN
+ARG VUE_APP_FIREBASE_PROJECT_ID
+ENV VUE_APP_FIREBASE_PROJECT_ID=$VUE_APP_FIREBASE_PROJECT_ID
+ARG VUE_APP_FIREBASE_STORAGE_BUCKET
+ENV VUE_APP_FIREBASE_STORAGE_BUCKET=$VUE_APP_FIREBASE_STORAGE_BUCKET
+ARG VUE_APP_FIREBASE_MESSAGING_SENDER_ID
+ENV VUE_APP_FIREBASE_MESSAGING_SENDER_ID=$VUE_APP_FIREBASE_MESSAGING_SENDER_ID
+ARG VUE_APP_FIREBASE_APP_ID
+ENV VUE_APP_FIREBASE_APP_ID=$VUE_APP_FIREBASE_APP_ID
+ARG VUE_APP_FIREBASE_MEASUREMENT_ID
+ENV VUE_APP_FIREBASE_MEASUREMENT_ID=$VUE_APP_FIREBASE_MEASUREMENT_ID
 
-# Jalankan build, ENV VUE_APP_SERVICE_API akan di-inject oleh Vue CLI/Vite
 RUN yarn build
 
 # Production Stage - Node.js Serve Static
 FROM node:20-alpine AS production-stage
 WORKDIR /app
 
+
+# Install 'serve' (static file server)
 RUN yarn global add serve
 
+# Copy build result from build-stage
 COPY --from=build-stage /app/dist /app/dist
 
 EXPOSE 8080
 
+# Jalankan 'serve' untuk hasil build di folder /app/dist
 CMD ["serve", "-s", "dist", "-l", "8080"]
