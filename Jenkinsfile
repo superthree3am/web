@@ -57,9 +57,7 @@ pipeline {
                                     -Dsonar.projectKey=${SONAR_QUBE_PROJECT_KEY} \
                                     -Dsonar.projectName="${SONAR_QUBE_PROJECT_NAME}" \
                                     -Dsonar.host.url=${SONAR_QUBE_SERVER_URL} \
-                                    -Dsonar.token=${SONAR_TOKEN} 
-                                    // -Dsonar.sources=. \
-                                    // -Dsonar.exclusions=node_modules/**,dist/**,build/**,coverage/**
+                                    -Dsonar.token=${SONAR_TOKEN}
                                 """
                             }
                         }
