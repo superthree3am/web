@@ -1,4 +1,4 @@
-halo# 🚀 Web Authentication Project (Frontend)
+# 🚀 Web Authentication Project (Frontend)
 
 Selamat datang di bagian **frontend** dari proyek otentikasi web kami! ✨ Dibangun dengan **Vue.js**, aplikasi ini menawarkan pengalaman pengguna yang modern dan responsif, dengan fokus pada **Multi-Factor Authentication (MFA)** dan praktik **Clean Code** terbaik.
 
@@ -111,3 +111,5 @@ atau
 yarn lint
 ``` 
 Ini akan memeriksa kode Anda dan memberikan laporan tentang potensi masalah atau pelanggaran terhadap aturan yang telah ditetapkan.
+
+haloo
