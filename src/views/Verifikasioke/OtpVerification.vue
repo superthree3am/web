@@ -261,7 +261,7 @@ export default {
         }
       } catch (error) {
         console.error("Error during OTP verification:", error);
-        errorMessage.value = 'An unexpected error occurred during OTP verification.';
+        errorMessage.value = 'Incorrect OTP code!';
       } finally {
         isLoading.value = false;
       }
