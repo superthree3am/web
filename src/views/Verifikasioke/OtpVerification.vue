@@ -1,5 +1,10 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
+
+    <TooManyRequestsModal
+      v-model:isVisible="showTooManyRequestsModal"
+      @backToLogin="goBackToLogin"
+    />
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
       <div class="flex justify-start mb-4">
@@ -91,9 +96,13 @@
 import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import TooManyRequestsModal from '@/components/ModalTooMany.vue';
 
 export default {
   name: 'OtpPage',
+  components: {
+    TooManyRequestsModal
+  },
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
@@ -108,6 +117,7 @@ export default {
     const showRecaptchaContainer = ref(true);
     const isBlocked = ref(false);
     const resendCountdown = ref(0);
+    const showTooManyRequestsModal = ref(false);
     let countdownInterval = null;
 
     const otpCode = computed(() => otpDigits.value.join(''));
@@ -163,6 +173,11 @@ export default {
       router.push('/login');
     };
 
+    const goBackToLogin = () => {
+      showTooManyRequestsModal.value = false;
+      router.push('/login');
+    };
+
     const startResendCountdown = (duration = 60) => {
       resendCountdown.value = duration;
       countdownInterval && clearInterval(countdownInterval);
@@ -212,10 +227,7 @@ export default {
 
           if (result.message?.includes('Too many OTP requests')) {
             isBlocked.value = true;
-
-            setTimeout(() => {
-              router.push('/login');
-            }, 10000);
+            showTooManyRequestsModal.value = true;
           }
         }
       } catch (error) {
@@ -296,11 +308,13 @@ export default {
       isBlocked,
       resendCountdown,
       resendCountdownFormatted,
+      showTooManyRequestsModal,
       handleOtpVerification,
       resendOtp,
       onOtpInput,
       onOtpBackspace,
       goBack,
+       goBackToLogin,
       otpInputs
     };
   },
