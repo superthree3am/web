@@ -1,7 +1,11 @@
 <template>
   <div class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down
-                 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
+
+    <TooManyRequestsModal
+      v-model:isVisible="showTooManyRequestsModal"
+      @backToLogin="goBackToLogin"
+    />
+    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
       <div class="flex justify-start mb-4">
         <button @click="goBack" data-test="go-back-button" class="text-gray-500 hover:text-gray-700 transition-colors duration-200">
@@ -36,7 +40,7 @@
 
       <form v-if="!isRecaptchaLoading" class="space-y-6" @submit.prevent="handleOtpVerification">
         <p class="text-center text-gray-800 font-medium text-base">
-        OTP Code (6 Digits)
+          OTP Code (6 Digits)
         </p>
         <div class="flex justify-center space-x-2">
           <input
@@ -57,8 +61,7 @@
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                           transition-all duration-300 ease-in-out"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 ease-in-out"
             :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
           >
             <span v-if="!isLoading">Verify OTP</span>
@@ -75,8 +78,14 @@
 
       <p v-if="!isRecaptchaLoading" class="mt-6 text-center text-sm text-gray-500">
         Didn't receive code?
-        <button @click="resendOtp" data-test="resend-otp-button" :disabled="isResending || isLoading" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
-          Resend OTP
+        <button
+          @click="resendOtp"
+          data-test="resend-otp-button"
+          :disabled="isResending || isLoading || isBlocked || resendCountdown > 0"
+          class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span v-if="resendCountdown > 0">Resend in {{ resendCountdownFormatted }}</span>
+          <span v-else>Resend OTP</span>
         </button>
       </p>
     </div>
@@ -87,9 +96,13 @@
 import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import TooManyRequestsModal from '@/components/ModalTooMany.vue';
 
 export default {
   name: 'OtpPage',
+  components: {
+    TooManyRequestsModal
+  },
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
@@ -100,20 +113,30 @@ export default {
     const errorMessage = ref('');
     const successMessage = ref('');
     const phoneNumberDisplay = ref('');
-    const isRecaptchaLoading = ref(true); 
-    const showRecaptchaContainer = ref(true); 
+    const isRecaptchaLoading = ref(true);
+    const showRecaptchaContainer = ref(true);
+    const isBlocked = ref(false);
+    const resendCountdown = ref(0);
+    const showTooManyRequestsModal = ref(false);
+    let countdownInterval = null;
 
     const otpCode = computed(() => otpDigits.value.join(''));
     const otpInputs = ref([]);
+
+    const resendCountdownFormatted = computed(() => {
+      const minutes = Math.floor(resendCountdown.value / 60);
+      const seconds = resendCountdown.value % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    });
 
     const onOtpInput = (index) => {
       let val = otpDigits.value[index];
       val = val.replace(/\D/g, '');
       if (val.length > 1) {
-          val = val.charAt(0);
+        val = val.charAt(0);
       }
-      otpDigits.value[index] = val; 
-      
+      otpDigits.value[index] = val;
+
       if (val && index < otpDigits.value.length - 1) {
         nextTick(() => {
           if (otpInputs.value[index + 1]) {
@@ -139,30 +162,46 @@ export default {
     };
 
     const focusFirstInput = () => {
-        nextTick(() => {
-            if (otpInputs.value[0]) {
-                otpInputs.value[0].focus();
-            }
-        });
+      nextTick(() => {
+        if (otpInputs.value[0]) {
+          otpInputs.value[0].focus();
+        }
+      });
     };
 
     const goBack = () => {
       router.push('/login');
     };
 
+    const goBackToLogin = () => {
+      showTooManyRequestsModal.value = false;
+      router.push('/login');
+    };
+
+    const startResendCountdown = (duration = 60) => {
+      resendCountdown.value = duration;
+      countdownInterval && clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        resendCountdown.value--;
+        if (resendCountdown.value <= 0) {
+          clearInterval(countdownInterval);
+        }
+      }, 1000);
+    };
+
     const initializeRecaptcha = async () => {
       errorMessage.value = '';
       successMessage.value = '';
-      isRecaptchaLoading.value = true; 
-      showRecaptchaContainer.value = true; 
-      otpDigits.value = ['', '', '', '', '', '']; 
+      isRecaptchaLoading.value = true;
+      showRecaptchaContainer.value = true;
+      otpDigits.value = ['', '', '', '', '', ''];
 
       const recaptchaEl = document.getElementById('recaptcha-container');
       if (recaptchaEl) {
-        recaptchaEl.innerHTML = ''; 
+        recaptchaEl.innerHTML = '';
       }
 
-      await nextTick(); 
+      await nextTick();
 
       const phoneNumber = authStore.currentPhoneNumber;
       if (!phoneNumber) {
@@ -178,19 +217,23 @@ export default {
 
         if (result.success) {
           successMessage.value = result.message;
-          isRecaptchaLoading.value = false; 
-          showRecaptchaContainer.value = false; 
-          focusFirstInput(); 
+          isRecaptchaLoading.value = false;
+          showRecaptchaContainer.value = false;
+          focusFirstInput();
+          startResendCountdown();
         } else {
           errorMessage.value = result.message || 'Failed to send OTP.';
-          isRecaptchaLoading.value = false; 
-          showRecaptchaContainer.value = true; 
+          isRecaptchaLoading.value = false;
+
+          if (result.message?.includes('Too many OTP requests')) {
+            isBlocked.value = true;
+            showTooManyRequestsModal.value = true;
+          }
         }
       } catch (error) {
         console.error("Error during reCAPTCHA initialization or sending OTP:", error);
         errorMessage.value = 'Failed to initialize reCAPTCHA or send OTP. Please try again.';
         isRecaptchaLoading.value = false;
-        showRecaptchaContainer.value = true; 
       }
     };
 
@@ -212,24 +255,28 @@ export default {
           successMessage.value = result.message;
           setTimeout(() => {
             router.push('/dashboard');
-          }, 1500); 
+          }, 1500);
         } else {
           errorMessage.value = result.message || 'OTP verification failed.';
         }
       } catch (error) {
         console.error("Error during OTP verification:", error);
-        errorMessage.value = 'An unexpected error occurred during OTP verification.';
+        errorMessage.value = 'Incorrect OTP code!';
       } finally {
         isLoading.value = false;
       }
     };
 
     const resendOtp = async () => {
-      isResending.value = true;
-      isLoading.value = true; 
+      if (isBlocked.value || resendCountdown.value > 0) return;
 
-      await initializeRecaptcha(); 
-      
+      isResending.value = true;
+      isLoading.value = true;
+
+      await initializeRecaptcha();
+
+      startResendCountdown();
+
       isResending.value = false;
       isLoading.value = false;
     };
@@ -258,11 +305,16 @@ export default {
       phoneNumberDisplay,
       isRecaptchaLoading,
       showRecaptchaContainer,
+      isBlocked,
+      resendCountdown,
+      resendCountdownFormatted,
+      showTooManyRequestsModal,
       handleOtpVerification,
       resendOtp,
       onOtpInput,
       onOtpBackspace,
       goBack,
+       goBackToLogin,
       otpInputs
     };
   },

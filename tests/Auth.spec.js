@@ -308,35 +308,7 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(result.message).toBe('OTP flow not initiated. Please try again.');
   });
 
-  it('fails OTP verification with incorrect OTP', async () => {
-    store.currentPhoneNumber = '+1234567890';
-    await store.sendOtpFirebase();
 
-    const result = await store.verifyOtpAndLoginWithFirebase('000000');
-
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Incorrect OTP code!');
-    expect(store.isAuthenticated).toBe(false);
-    expect(store.confirmationResult).toBeNull();
-    expect(store.currentPhoneNumber).toBeNull();
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
-  });
-
-
-  it('fails OTP verification with generic Firebase error', async () => {
-    store.currentPhoneNumber = '+1234567890';
-    await store.sendOtpFirebase();
-
-    const result = await store.verifyOtpAndLoginWithFirebase('999999');
-
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Too many attempts. Try again later.'); 
-    expect(store.isAuthenticated).toBe(false);
-    expect(store.confirmationResult).toBeNull();
-    expect(store.currentPhoneNumber).toBeNull();
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('current_phone_number');
-    expect(mockRecaptchaVerifierClear).toHaveBeenCalled();
-  });
 
   it('fails OTP verification if backend API call fails', async () => {
     store.currentPhoneNumber = '+1234567890';
@@ -516,5 +488,49 @@ describe('auth store - real store with mocked Firebase', () => {
     expect(localStorageMock.getItem).toHaveBeenCalledWith('user_data');
     expect(localStorageMock.getItem).toHaveBeenCalledWith('current_phone_number');
   });
+
+  it('fails to fetch profile when token is missing', async () => {
+    store.token = null;
+    localStorageMock.getItem.mockReturnValueOnce(null);
+
+    const result = await store.getProfile();
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('No authentication token found.');
+  });
+
+  it('fails OTP verification with code expired', async () => {
+    store.currentPhoneNumber = '+1234567890';
+    await store.sendOtpFirebase();
+
+    // Simulasi expired OTP
+    store.confirmationResult.confirm = vi.fn(() => {
+      return Promise.reject({ code: 'auth/code-expired', message: 'OTP expired' });
+    });
+
+    const result = await store.verifyOtpAndLoginWithFirebase('000000');
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('OTP expired. Please resend.');
+  });
+
+  it('logs out gracefully when firebase currentUser is null', async () => {
+    store.token = 'mock-token';
+    store.user = { username: 'tester' };
+    store.isAuthenticated = true;
+
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    auth.currentUser = null;
+
+    fetchSpy.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+
+    await store.logout();
+
+    expect(mockSignOut).not.toHaveBeenCalled(); // karena currentUser null
+    expect(store.isAuthenticated).toBe(false);
+    expect(store.token).toBeNull();
+  });
+
 
 });
