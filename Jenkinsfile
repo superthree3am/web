@@ -30,28 +30,23 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
+        stage('Unit Test & SAST') {
             steps {
                 dir('frontend') {
-                    withCredentials([file(credentialsId: 'env-frontend-gke', variable: 'ENV_FILE')]) {
-                        sh '''
-                            cp "$ENV_FILE" .env
-                            npm install
-                            npm test
-                            rm .env
-                        '''
-                    }
-                }
-            }
-        }
+                    withCredentials([
+                        file(credentialsId: 'env-frontend-gke', variable: 'ENV_FILE'),
+                        string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')
+                    ]) {
+                        script {
+                            def scannerHome = tool 'SonarScanner'
+                            withSonarQubeEnv('SonarQube') {
+                                sh '''
+                                    cp "$ENV_FILE" .env
+                                    npm install
+                                    npm test
+                                    rm .env
+                                '''
 
-        stage('SAST with SonarQube') {
-            steps {
-                dir('frontend') {
-                    script {
-                        def scannerHome = tool 'SonarScanner'
-                        withSonarQubeEnv('SonarQube') {
-                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                                 sh """
                                     ${scannerHome}/bin/sonar-scanner \
                                     -Dsonar.projectKey=${SONAR_QUBE_PROJECT_KEY} \
