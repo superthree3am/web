@@ -162,24 +162,34 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: false, message: data.message || 'Backend verification failed.' };
       }
     } catch (error) {
-      console.error("OTP verification error:", error);
-      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
-      let errorMessage = error.message || 'OTP verification failed.';
-      if (error.code === 'auth/invalid-verification-code') {
-        errorMessage = 'Incorrect OTP code!';
-      } else if (error.code === 'auth/code-expired') {
-        errorMessage = 'OTP expired. Please resend.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many attempts. Try again later.';
-      }
-      // Clear state on Firebase verification error
-      currentPhoneNumber.value = null;
-      confirmationResult.value = null;
-      localStorage.removeItem('current_phone_number');
-      localStorage.removeItem('auth_token'); // Ditambahkan
-      localStorage.removeItem('user_data');   // Ditambahkan
-      return { success: false, message: errorMessage };
-    } finally {
+  console.error("OTP verification error:", error);
+  if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+
+  let errorMessage = error.message || 'OTP verification failed.';
+  const isOtpError = error.code === 'auth/invalid-verification-code';
+
+  if (isOtpError) {
+    errorMessage = 'Incorrect OTP code!';
+  } else if (error.code === 'auth/code-expired') {
+    errorMessage = 'OTP expired. Please resend.';
+  } else if (error.code === 'auth/too-many-requests') {
+    errorMessage = 'Too many attempts. Try again later.';
+    isBlocked.value = true;
+    blockedUntil.value = Date.now() + 5 * 60 * 1000; // 5 menit blokir
+  }
+
+  // ✅ Jangan reset state kalau hanya OTP salah
+  if (!isOtpError) {
+    currentPhoneNumber.value = null;
+    confirmationResult.value = null;
+    localStorage.removeItem('current_phone_number');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+  }
+
+  return { success: false, message: errorMessage };
+}
+ finally {
       isLoading.value = false;
     }
   };
