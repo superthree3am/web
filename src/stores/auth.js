@@ -8,6 +8,9 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(null);
   const isAuthenticated = ref(false);
   const isLoading = ref(false);
+  const isBlocked = ref(false);
+  const blockedUntil = ref(null);
+
   const baseURL = process.env.VUE_APP_SERVICE_API || 'http://localhost:8080';
 
   const firebaseConfig = {
@@ -348,6 +351,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isLoading,
     confirmationResult,
+    isBlocked,       
+    blockedUntil,
     login,
     sendOtpFirebase,
     verifyOtpAndLoginWithFirebase,
