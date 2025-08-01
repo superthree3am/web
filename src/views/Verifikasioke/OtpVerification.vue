@@ -73,16 +73,15 @@
 
       <p v-if="!isRecaptchaLoading" class="mt-6 text-center text-sm text-gray-500">
         Didn't receive code?
-       <button
-        @click="resendOtp"
-        data-test="resend-otp-button"
-        :disabled="isResending || isLoading || isBlocked || resendCountdown > 0"
-        class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span v-if="resendCountdown > 0">Resend in {{ resendCountdownFormatted }}</span>
-        <span v-else>Resend OTP</span>
-      </button>
-
+        <button
+          @click="resendOtp"
+          data-test="resend-otp-button"
+          :disabled="isResending || isLoading || isBlocked || resendCountdown > 0"
+          class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span v-if="resendCountdown > 0">Resend in {{ resendCountdownFormatted }}</span>
+          <span v-else>Resend OTP</span>
+        </button>
       </p>
     </div>
   </div>
@@ -216,7 +215,7 @@ export default {
 
             setTimeout(() => {
               router.push('/login');
-            }, 5000);
+            }, 10000);
           }
         }
       } catch (error) {
@@ -264,7 +263,7 @@ export default {
 
       await initializeRecaptcha();
 
-      startResendCountdown(); // ⬅️ mulai countdown setelah resend OTP
+      startResendCountdown();
 
       isResending.value = false;
       isLoading.value = false;
