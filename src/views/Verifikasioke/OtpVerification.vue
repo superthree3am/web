@@ -73,9 +73,16 @@
 
       <p v-if="!isRecaptchaLoading" class="mt-6 text-center text-sm text-gray-500">
         Didn't receive code?
-        <button @click="resendOtp" data-test="resend-otp-button" :disabled="isResending || isLoading || isBlocked" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
-          Resend OTP
-        </button>
+       <button
+        @click="resendOtp"
+        data-test="resend-otp-button"
+        :disabled="isResending || isLoading || isBlocked || resendCountdown > 0"
+        class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span v-if="resendCountdown > 0">Resend in {{ resendCountdownFormatted }}</span>
+        <span v-else>Resend OTP</span>
+      </button>
+
       </p>
     </div>
   </div>
@@ -101,9 +108,17 @@ export default {
     const isRecaptchaLoading = ref(true);
     const showRecaptchaContainer = ref(true);
     const isBlocked = ref(false);
+    const resendCountdown = ref(0);
+    let countdownInterval = null;
 
     const otpCode = computed(() => otpDigits.value.join(''));
     const otpInputs = ref([]);
+
+    const resendCountdownFormatted = computed(() => {
+      const minutes = Math.floor(resendCountdown.value / 60);
+      const seconds = resendCountdown.value % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    });
 
     const onOtpInput = (index) => {
       let val = otpDigits.value[index];
@@ -149,6 +164,17 @@ export default {
       router.push('/login');
     };
 
+    const startResendCountdown = (duration = 60) => {
+      resendCountdown.value = duration;
+      countdownInterval && clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        resendCountdown.value--;
+        if (resendCountdown.value <= 0) {
+          clearInterval(countdownInterval);
+        }
+      }, 1000);
+    };
+
     const initializeRecaptcha = async () => {
       errorMessage.value = '';
       successMessage.value = '';
@@ -180,6 +206,7 @@ export default {
           isRecaptchaLoading.value = false;
           showRecaptchaContainer.value = false;
           focusFirstInput();
+          startResendCountdown();
         } else {
           errorMessage.value = result.message || 'Failed to send OTP.';
           isRecaptchaLoading.value = false;
@@ -230,12 +257,14 @@ export default {
     };
 
     const resendOtp = async () => {
-      if (isBlocked.value) return;
+      if (isBlocked.value || resendCountdown.value > 0) return;
 
       isResending.value = true;
       isLoading.value = true;
 
       await initializeRecaptcha();
+
+      startResendCountdown(); // ⬅️ mulai countdown setelah resend OTP
 
       isResending.value = false;
       isLoading.value = false;
@@ -266,6 +295,8 @@ export default {
       isRecaptchaLoading,
       showRecaptchaContainer,
       isBlocked,
+      resendCountdown,
+      resendCountdownFormatted,
       handleOtpVerification,
       resendOtp,
       onOtpInput,
@@ -276,19 +307,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-@keyframes fade-in-down {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-in-down {
-  animation: fade-in-down 0.5s ease-out forwards;
-}
-</style>
