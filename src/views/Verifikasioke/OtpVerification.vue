@@ -5,6 +5,12 @@
       v-model:isVisible="showTooManyRequestsModal"
       @backToLogin="goBackToLogin"
     />
+
+    <TooManyAttemptsModal
+      v-model:isVisible="showTooManyAttemptsModal"
+      @backToLogin="goBackToLogin"
+    />
+
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in-down hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 ease-in-out">
 
       <div class="flex justify-start mb-4">
@@ -57,6 +63,10 @@
             :ref="(el) => otpInputs[index] = el" />
         </div>
 
+        <p v-if="failedAttempts > 0 && failedAttempts < maxAttempts" class="mt-4 text-center text-sm text-red-500">
+          Failed attempts: {{ failedAttempts }} from {{ maxAttempts }}
+        </p>
+
         <div>
           <button
             type="submit"
@@ -97,11 +107,13 @@ import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import TooManyRequestsModal from '@/components/ModalTooMany.vue';
+import TooManyAttemptsModal from '@/components/TooManyAttemptsModal.vue'; 
 
 export default {
   name: 'OtpPage',
   components: {
-    TooManyRequestsModal
+    TooManyRequestsModal,
+    TooManyAttemptsModal 
   },
   setup() {
     const router = useRouter();
@@ -117,7 +129,15 @@ export default {
     const showRecaptchaContainer = ref(true);
     const isBlocked = ref(false);
     const resendCountdown = ref(0);
+
+    // State untuk mengontrol dua modal berbeda
     const showTooManyRequestsModal = ref(false);
+    const showTooManyAttemptsModal = ref(false);
+
+    // State lokal untuk menghitung percobaan gagal
+    const failedAttempts = ref(0);
+    const maxAttempts = 3; 
+
     let countdownInterval = null;
 
     const otpCode = computed(() => otpDigits.value.join(''));
@@ -175,6 +195,7 @@ export default {
 
     const goBackToLogin = () => {
       showTooManyRequestsModal.value = false;
+      showTooManyAttemptsModal.value = false; // Pastikan semua modal tertutup
       router.push('/login');
     };
 
@@ -195,6 +216,7 @@ export default {
       isRecaptchaLoading.value = true;
       showRecaptchaContainer.value = true;
       otpDigits.value = ['', '', '', '', '', ''];
+      failedAttempts.value = 0; // Reset percobaan saat reCAPTCHA baru diinisialisasi
 
       const recaptchaEl = document.getElementById('recaptcha-container');
       if (recaptchaEl) {
@@ -227,6 +249,7 @@ export default {
 
           if (result.message?.includes('Too many OTP requests')) {
             isBlocked.value = true;
+            // Gunakan modal TooManyRequestsModal di sini
             showTooManyRequestsModal.value = true;
           }
         }
@@ -253,15 +276,31 @@ export default {
 
         if (result.success) {
           successMessage.value = result.message;
+          failedAttempts.value = 0; // Reset jika berhasil
           setTimeout(() => {
             router.push('/dashboard');
           }, 1500);
         } else {
           errorMessage.value = result.message || 'OTP verification failed.';
+          
+          if (errorMessage.value.includes('Incorrect OTP code')) {
+            failedAttempts.value++;
+            if (failedAttempts.value >= maxAttempts) {
+              isBlocked.value = true;
+              // Gunakan modal TooManyAttemptsModal di sini
+              showTooManyAttemptsModal.value = true;
+            }
+          }
         }
       } catch (error) {
         console.error("Error during OTP verification:", error);
         errorMessage.value = 'Incorrect OTP code!';
+        failedAttempts.value++; 
+        if (failedAttempts.value >= maxAttempts) {
+          isBlocked.value = true;
+          // Gunakan modal TooManyAttemptsModal di sini
+          showTooManyAttemptsModal.value = true;
+        }
       } finally {
         isLoading.value = false;
       }
@@ -272,6 +311,8 @@ export default {
 
       isResending.value = true;
       isLoading.value = true;
+      
+      failedAttempts.value = 0; 
 
       await initializeRecaptcha();
 
@@ -309,13 +350,16 @@ export default {
       resendCountdown,
       resendCountdownFormatted,
       showTooManyRequestsModal,
+      showTooManyAttemptsModal, // Tambahkan state modal baru
       handleOtpVerification,
       resendOtp,
       onOtpInput,
       onOtpBackspace,
       goBack,
-       goBackToLogin,
-      otpInputs
+      goBackToLogin,
+      otpInputs,
+      failedAttempts, 
+      maxAttempts, 
     };
   },
 };
