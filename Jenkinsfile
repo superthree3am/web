@@ -25,7 +25,7 @@ pipeline {
             steps {
                 deleteDir()
                 dir('frontend') {
-                    git branch: 'fathya-fe', url: 'https://github.com/superthree3am/web.git'
+                    git branch: 'main', url: 'https://github.com/superthree3am/web.git'
                 }
             }
         }
