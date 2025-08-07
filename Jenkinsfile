@@ -21,18 +21,8 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                deleteDir()
-                dir('frontend') {
-                    git branch: 'main', url: 'https://github.com/superthree3am/web.git'
-                }
-            }
-        }
-
         stage('Unit Test & SAST') {
             steps {
-                dir('frontend') {
                     withCredentials([
                         file(credentialsId: 'env-frontend-gke', variable: 'ENV_FILE'),
                         string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')
@@ -57,13 +47,11 @@ pipeline {
                             }
                         }
                     }
-                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                dir('frontend') {
                     withCredentials([file(credentialsId: 'env-frontend-gke', variable: 'ENV_FILE')]) {
                         sh '''
                             cp "$ENV_FILE" .env
@@ -82,7 +70,6 @@ pipeline {
                             rm .env
                         '''
                     }
-                }
             }
         }
 
