@@ -93,7 +93,7 @@ pipeline {
                         gcloud config set project $PROJECT_ID
                         gcloud container clusters get-credentials $CLUSTER_NAME --region $REGION
 
-                        kubectl apply -f frontend/k8s/frontend.yml
+                        kubectl apply -f k8s/frontend.yml
                         kubectl rollout restart deployment/frontend-app
                     '''
                 }
