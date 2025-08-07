@@ -111,5 +111,3 @@ atau
 yarn lint
 ``` 
 Ini akan memeriksa kode Anda dan memberikan laporan tentang potensi masalah atau pelanggaran terhadap aturan yang telah ditetapkan.
-
-halooo
