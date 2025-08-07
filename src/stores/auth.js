@@ -282,23 +282,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  const logout = async () => {
+const logout = async () => {
     try {
       if (firebaseAuth.currentUser) {
         await signOut(firebaseAuth);
       }
-      await fetch(`${baseURL}/logout`, {
+      await fetch(`${baseURL}/api/v1/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token.value}`,
         },
-        credentials: 'include',
       });
     } catch (error) {
       console.error('Logout error:', error);
     }
-
     user.value = null;
     token.value = null;
     isAuthenticated.value = false;
