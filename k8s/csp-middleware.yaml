@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: csp-headers
+  namespace: default # Ganti dengan namespace aplikasi Vue Anda
+spec:
+  headers:
+    # Menambahkan header CSP
+    customResponseHeaders:
+      Content-Security-Policy: "default-src 'self'; script-src 'self'; object-src 'none';"
