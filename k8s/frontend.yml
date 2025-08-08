@@ -47,4 +47,4 @@ spec:
         - name: frontend-app
           port: 8080
       middlewares:
-        - name: csp-headers
+        - name: security-headers
